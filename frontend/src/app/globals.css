@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: var(--font-nunito), Arial, sans-serif;
+}
+
+:root {
+  /* Soft warm cream background */
+  --background: #FFFDF7;
+  --foreground: #1D1D23;
+
+  /* Playful bright card */
+  --card: #FFFFFF;
+  --card-foreground: #1D1D23;
+  
+  --popover: #FFFFFF;
+  --popover-foreground: #1D1D23;
+
+  /* Vibrant purple accent */
+  --primary: #8A2BE2;
+  --primary-foreground: #FFFFFF;
+
+  /* Crisp blue */
+  --secondary: #3B82F6;
+  --secondary-foreground: #FFFFFF;
+
+  /* Energetic orange for highlights/alerts */
+  --accent: #FF7F50;
+  --accent-foreground: #FFFFFF;
+
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #8A2BE2;
+
+  --radius: 1rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Neobrutalism Lite styles */
+.neobrutal-box {
+  border: 3px solid #1D1D23;
+  box-shadow: 4px 4px 0px #1D1D23;
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+/* Hanya tombol (button) yang bereaksi saat diklik, bukan card/wrapper */
+.neobrutal-button:active {
+  box-shadow: 0px 0px 0px #1D1D23;
+  transform: translate(4px, 4px);
+}
+
+.neobrutal-button {
+  border: 3px solid #1D1D23;
+  box-shadow: 4px 4px 0px #1D1D23;
+  border-radius: 9999px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
