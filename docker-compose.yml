@@ -1,0 +1,91 @@
+services:
+  # ─── MySQL Database ─────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-snapjoy}
+      MYSQL_USER: ${DB_USERNAME:-snapjoy}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-snapjoy_secret}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD:-snapjoy_secret}"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+    networks:
+      - snapjoy
+
+  # ─── Laravel Backend (API) ───────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    # Install dependencies, run migrations, then serve
+    command: >
+      sh -c "composer install --no-interaction --no-plugins --no-scripts
+      && php artisan key:generate --ansi
+      && php artisan migrate --force
+      && php artisan storage:link
+      && php artisan serve --host=0.0.0.0 --port=8000"
+    environment:
+      APP_ENV: local
+      APP_KEY: ${APP_KEY:-}
+      APP_URL: http://localhost:8000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-snapjoy}
+      DB_USERNAME: ${DB_USERNAME:-snapjoy}
+      DB_PASSWORD: ${DB_PASSWORD:-snapjoy_secret}
+      SANCTUM_STATEFUL_DOMAINS: localhost:3000
+      FRONTEND_URL: http://localhost:3000
+      SESSION_DOMAIN: localhost
+      FILESYSTEM_DISK: public
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - snapjoy
+
+  # ─── Next.js Frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder   # Use 'runner' for production
+    restart: unless-stopped
+    working_dir: /app
+    # Override to run dev server with hot-reload (development mode)
+    command: sh -c "npm run dev"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - snapjoy
+
+networks:
+  snapjoy:
+    driver: bridge
+
+volumes:
+  db_data:
+  backend_storage:
