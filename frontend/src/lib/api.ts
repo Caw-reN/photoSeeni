@@ -7,7 +7,7 @@ const getHeaders = () => {
   };
 
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('snapjoy_token');
+    const token = localStorage.getItem('fotoseeni_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -18,7 +18,7 @@ const getHeaders = () => {
 
 const getAuthToken = (): string | null => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('snapjoy_token');
+    return localStorage.getItem('fotoseeni_token');
   }
   return null;
 };
@@ -42,9 +42,9 @@ export async function apiRequest<T = any>(
     if (response.status === 401) {
       // Token expired or invalid - clear it and redirect to auth
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('snapjoy_token');
+        localStorage.removeItem('fotoseeni_token');
         // Hapus cookie dengan menset expiry date ke masa lalu
-        document.cookie = 'snapjoy_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax; Secure';
+        document.cookie = 'fotoseeni_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax; Secure';
         window.location.href = '/auth';
       }
       throw new Error('Session expired. Please login again.');

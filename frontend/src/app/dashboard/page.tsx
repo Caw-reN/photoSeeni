@@ -89,7 +89,7 @@ export default function DashboardGalleryPage() {
                 {session.final_image_url && (
                   <a
                     href={session.final_image_url}
-                    download={`snapjoy-${session.id}.jpg`}
+                    download={`fotoseeni-${session.id}.jpg`}
                     className="p-1.5 bg-[#3B82F6] text-white rounded-full border-2 border-[#1D1D23] hover:bg-[#4f8ff7] transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   // Ambil token dari cookie
-  const token = request.cookies.get('snapjoy_token')?.value;
+  const token = request.cookies.get('fotoseeni_token')?.value;
 
   // Jika tidak ada token, redirect ke halaman login
   if (!token) {

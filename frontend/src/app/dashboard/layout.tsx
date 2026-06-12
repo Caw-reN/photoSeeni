@@ -39,14 +39,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setUser(userData.user ?? userData);
     } catch (err: any) {
       if (err.message?.includes('Session expired')) {
-        localStorage.removeItem('snapjoy_token');
+        localStorage.removeItem('fotoseeni_token');
         router.push('/auth');
       }
     }
   }, [router]);
 
   useEffect(() => {
-    const token = localStorage.getItem('snapjoy_token');
+    const token = localStorage.getItem('fotoseeni_token');
     if (!token) {
       router.push('/auth');
       return;
@@ -63,8 +63,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       await authApi.logout();
     } catch (_) {}
-    localStorage.removeItem('snapjoy_token');
-    document.cookie = 'snapjoy_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
+    localStorage.removeItem('fotoseeni_token');
+    document.cookie = 'fotoseeni_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
     window.location.href = '/';
   };
 

@@ -11,7 +11,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "SnapJoy - Online Photobooth",
+  title: "fotoseeni - Online Photobooth",
   description: "A fun, vibrant online photobooth experience.",
 };
 

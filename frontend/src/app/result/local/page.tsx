@@ -22,8 +22,8 @@ export default function LocalResultPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'My SnapJoy Photobooth Strip!',
-          text: 'Check out my fun photo strip from SnapJoy!',
+          title: 'My fotoseeni Photobooth Strip!',
+          text: 'Check out my fun photo strip from fotoseeni!',
           url: window.location.href,
         });
       } catch (e) {}

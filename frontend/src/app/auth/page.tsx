@@ -31,11 +31,11 @@ export default function AuthPage() {
       }
       
       // Simpan di LocalStorage untuk client-side fetching
-      localStorage.setItem('snapjoy_token', token);
+      localStorage.setItem('fotoseeni_token', token);
       
       // Simpan juga di Cookies agar Middleware (server-side) bisa membacanya
       // Expire dalam 7 hari (604800 detik)
-      document.cookie = `snapjoy_token=${token}; path=/; max-age=604800; SameSite=Lax; Secure`;
+      document.cookie = `fotoseeni_token=${token}; path=/; max-age=604800; SameSite=Lax; Secure`;
 
       window.location.href = '/dashboard';
     } catch (err: any) {

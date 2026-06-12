@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('snapjoy_token');
+    const token = localStorage.getItem('fotoseeni_token');
     if (!token) {
       router.push('/auth');
       return;
@@ -51,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setUser(u);
       } catch (err: any) {
         if (err.message?.includes('Session expired')) {
-          localStorage.removeItem('snapjoy_token');
+          localStorage.removeItem('fotoseeni_token');
           router.push('/auth');
         }
       } finally {
@@ -65,8 +65,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     try {
       await authApi.logout();
     } catch (_) {}
-    localStorage.removeItem('snapjoy_token');
-    document.cookie = 'snapjoy_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
+    localStorage.removeItem('fotoseeni_token');
+    document.cookie = 'fotoseeni_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
     window.location.href = '/';
   };
 

@@ -286,7 +286,7 @@ export default function CheckoutPage() {
   // ── Helper: load gambar via fetch→blob→objectURL (bypass CORS canvas taint) ──
   const loadImageFromUrl = async (url: string): Promise<HTMLImageElement> => {
     const headers: HeadersInit = { 'ngrok-skip-browser-warning': '69420' };
-    const token = typeof window !== 'undefined' ? localStorage.getItem('snapjoy_token') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('fotoseeni_token') : null;
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const response = await fetch(url, { headers });
@@ -639,7 +639,7 @@ export default function CheckoutPage() {
                   <CreditCard className="w-3.5 h-3.5 text-white" />
                 </div>
                 <span className="font-black text-slate-950 text-md tracking-tight uppercase">
-                  SnapJoy <span className="text-indigo-600">Pay</span>
+                  fotoseeni <span className="text-indigo-600">Pay</span>
                 </span>
               </div>
               <button

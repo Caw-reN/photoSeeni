@@ -96,14 +96,14 @@ export default function Home() {
                 <Sparkles className="w-12 h-12 text-yellow-500" />
               </div>
               <div className="text-center font-extrabold text-[#1D1D23] py-2 border-t-2 border-dashed border-gray-300">
-                SNAPJOY MEMORIES
+                FOTOSEENI MEMORIES
               </div>
             </div>
           </div>
 
           <div className="w-full lg:w-1/2">
             <h2 className="text-4xl font-extrabold text-[#1D1D23] mb-6">
-              How SnapJoy Works 🎬
+              How fotoseeni Works 🎬
             </h2>
             <ol className="space-y-6">
               <li className="flex gap-4">
@@ -143,7 +143,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="mt-auto py-8 text-center border-t-3 border-[#1D1D23] bg-white text-gray-500 font-medium">
-        <p>© {new Date().getFullYear()} SnapJoy. All rights saved. Let's make the web cheerful again! 💛</p>
+        <p>© {new Date().getFullYear()} fotoseeni. All rights saved. Let's make the web cheerful again! 💛</p>
       </footer>
     </div>
   );

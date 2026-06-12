@@ -242,7 +242,7 @@ export default function ResultPage() {
     if (!src) return;
     const a = document.createElement('a');
     a.href = src;
-    a.download = `snapjoy-${session?.id || 'strip'}.jpg`;
+    a.download = `fotoseeni-${session?.id || 'strip'}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -253,8 +253,8 @@ export default function ResultPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'My SnapJoy Photo Strip!',
-          text: 'Lihat foto booth saya dari SnapJoy!',
+          title: 'My fotoseeni Photo Strip!',
+          text: 'Lihat foto booth saya dari fotoseeni!',
           url: window.location.href,
         });
       } catch (_) {}

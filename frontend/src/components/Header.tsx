@@ -20,7 +20,7 @@ export default function Header() {
         // User not logged in
       }
     };
-    if (localStorage.getItem('snapjoy_token')) {
+    if (localStorage.getItem('fotoseeni_token')) {
       fetchUser();
     }
   }, []);
@@ -29,9 +29,9 @@ export default function Header() {
     try {
       await authApi.logout();
     } catch (_) {}
-    localStorage.removeItem('snapjoy_token');
+    localStorage.removeItem('fotoseeni_token');
     // Hapus cookie agar Next.js Middleware tidak mengizinkan akses ke /dashboard lagi
-    document.cookie = 'snapjoy_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
+    document.cookie = 'fotoseeni_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
     setUser(null);
     window.location.href = '/';
   };
@@ -53,7 +53,7 @@ export default function Header() {
             <Camera className="w-6 h-6 text-[#1D1D23]" />
           </div>
           <span className="font-bold text-2xl tracking-tight text-[#1D1D23]">
-            Snap<span className="text-[#8A2BE2]">Joy</span>
+            foto<span className="text-[#8A2BE2]">seeni</span>
           </span>
         </Link>
 

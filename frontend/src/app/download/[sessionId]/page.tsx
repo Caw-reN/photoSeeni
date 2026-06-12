@@ -196,7 +196,7 @@ export default function DownloadPage() {
     if (!canvasDataUrl) return;
     const a = document.createElement('a');
     a.href = canvasDataUrl;
-    a.download = `snapjoy-strip-${session?.id || 'photo'}.jpg`;
+    a.download = `fotoseeni-strip-${session?.id || 'photo'}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -205,7 +205,7 @@ export default function DownloadPage() {
   const handleDownloadRaw = (photoId: number, index: number) => {
     const a = document.createElement('a');
     a.href = `${BACKEND_URL}/api/photos/${photoId}/download`;
-    a.download = `snapjoy-raw-${index + 1}.jpg`;
+    a.download = `fotoseeni-raw-${index + 1}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -262,7 +262,7 @@ export default function DownloadPage() {
       {/* ── Header ── */}
       <div className="text-center mb-10 max-w-xl">
         <div className="inline-block px-4 py-1.5 bg-[#8A2BE2] text-white font-black text-xs uppercase rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] mb-3">
-          SnapJoy Download Center
+          fotoseeni Download Center
         </div>
         <h1 className="text-3xl md:text-4xl font-black text-[#1D1D23] tracking-tight uppercase">
           Unduh Hasil Foto Anda
