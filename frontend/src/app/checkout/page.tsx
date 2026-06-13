@@ -146,6 +146,29 @@ export default function CheckoutPage() {
       if (storedSession) {
         setSessionId(storedSession);
       }
+
+      // Restore pending payment state if it exists
+      const pendingPayment = localStorage.getItem('pending_payment');
+      if (pendingPayment) {
+        try {
+          const { qrUrl, qrString, sessionId: paymentSessionId, expiresAt } = JSON.parse(pendingPayment);
+          // Only restore if not expired (QR valid for 10 minutes)
+          if (expiresAt && Date.now() < expiresAt) {
+            setPaymentQrUrl(qrUrl || null);
+            setPaymentQrString(qrString || null);
+            if (paymentSessionId) setSessionId(paymentSessionId);
+            const remainingSeconds = Math.floor((expiresAt - Date.now()) / 1000);
+            setCountdown(remainingSeconds);
+            setPaymentStep('details');
+            setShowPaymentModal(true);
+          } else {
+            // Expired — clean up
+            localStorage.removeItem('pending_payment');
+          }
+        } catch {
+          localStorage.removeItem('pending_payment');
+        }
+      }
     } catch (e) {
       console.error(e);
       toast.error('Gagal memuat data checkout.');
@@ -185,6 +208,7 @@ export default function CheckoutPage() {
             
             toast.success('Pembayaran sukses & foto berhasil diproses!');
             setPaymentStep('success');
+            localStorage.removeItem('pending_payment'); // clear persisted QR
             
             setTimeout(() => {
               setShowPaymentModal(false);
@@ -200,6 +224,7 @@ export default function CheckoutPage() {
             console.error('Failed to render or complete session client-side:', completeErr);
             toast.success('Pembayaran sukses!');
             setPaymentStep('success');
+            localStorage.removeItem('pending_payment'); // clear persisted QR
             setTimeout(() => {
               setShowPaymentModal(false);
               localStorage.removeItem('arranged_slots');
@@ -211,6 +236,7 @@ export default function CheckoutPage() {
           }
         } else if (session.payment_status !== 'pending' && session.payment_status !== 'unpaid') {
           toast.error(`Pembayaran gagal atau kedaluwarsa: status ${session.payment_status}`);
+          localStorage.removeItem('pending_payment'); // clear expired QR
           setShowPaymentModal(false);
           isStopped = true;
         }
@@ -408,11 +434,20 @@ export default function CheckoutPage() {
       const res = await sessionsApi.pay(sessionId, returnUrl, selectedFrame?.id);
       
       if (res.status === 'success') {
-        setPaymentQrUrl(res.payment_info?.qr_url || null);
-        setPaymentQrString(res.payment_info?.qr_string || null);
+        const qrUrl = res.payment_info?.qr_url || null;
+        const qrString = res.payment_info?.qr_string || null;
+        setPaymentQrUrl(qrUrl);
+        setPaymentQrString(qrString);
         setCountdown(600);
         setPaymentStep('details');
         setShowPaymentModal(true);
+        // Persist QR state so refresh doesn't lose the modal
+        localStorage.setItem('pending_payment', JSON.stringify({
+          qrUrl,
+          qrString,
+          sessionId,
+          expiresAt: Date.now() + 600_000, // 10 minutes
+        }));
       } else {
         toast.error(res.message || 'Gagal menginisiasi pembayaran dengan Paymenku.');
       }
