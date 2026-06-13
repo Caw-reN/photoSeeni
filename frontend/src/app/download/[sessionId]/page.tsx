@@ -121,9 +121,44 @@ export default function DownloadPage() {
     });
   }, []);
 
-  // ── Canvas render — pakai blob loading agar canvas tidak tainted oleh CORS ──
+  // ── Canvas render — skip if server already has final_image_url (correct with edits) ──
   const renderToCanvas = useCallback(async () => {
     if (hasRendered.current) return;
+
+    // If the server already has a final composited image (uploaded by checkout),
+    // use it directly — it already contains the user's edits (rotate, scale, translate)
+    if (session?.final_image_url) {
+      hasRendered.current = true;
+      setIsRendering(true);
+      try {
+        const response = await fetch(proxyImageUrl(session.final_image_url));
+        if (!response.ok) throw new Error('Gagal mengambil final image dari server');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        // Convert to data URL for download
+        const img = new Image();
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej(new Error('Gagal decode final image'));
+          img.src = objectUrl;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(objectUrl);
+        setCanvasDataUrl(canvas.toDataURL('image/jpeg', 0.95));
+      } catch (err: any) {
+        console.error('Final image fetch error:', err);
+        // Fallback to re-render below
+        hasRendered.current = false;
+      } finally {
+        setIsRendering(false);
+      }
+      return;
+    }
+
     if (!frameImgRef.current || coordinates.length === 0 || slotsData.length === 0) return;
     const frameEl = frameImgRef.current;
     if (!frameEl.complete || frameEl.naturalWidth === 0) return;
@@ -189,7 +224,7 @@ export default function DownloadPage() {
       objectUrls.forEach(u => URL.revokeObjectURL(u));
       setIsRendering(false);
     }
-  }, [coordinates, slotsData, frameId, loadImageFromUrl]);
+  }, [coordinates, slotsData, frameId, loadImageFromUrl, session?.final_image_url]);
 
   const handleFrameLoad = useCallback(() => { renderToCanvas(); }, [renderToCanvas]);
 
@@ -256,8 +291,8 @@ export default function DownloadPage() {
     ? [...session.photos].sort((a: any, b: any) => a.slot_index - b.slot_index)
     : [];
 
-  const canShowLayered = frameImageUrl && coordinates.length > 0 && slotsData.length > 0;
-  const hasStrip = canvasDataUrl || session.final_image_url;
+  const canShowLayered = frameImageUrl && coordinates.length > 0 && slotsData.length > 0 && !session?.final_image_url;
+  const hasStrip = canvasDataUrl || session?.final_image_url;
 
   return (
     <div className="min-h-screen bg-[#FFFDF7] py-10 px-4 flex flex-col items-center">
@@ -338,10 +373,11 @@ export default function DownloadPage() {
                   className="w-full h-auto block relative z-10 pointer-events-none"
                 />
               </div>
-            ) : session.final_image_url ? (
+            ) : session?.final_image_url ? (
               <img
                 src={proxyImageUrl(session.final_image_url)}
                 alt="Final Photo Strip"
+                onLoad={() => renderToCanvas()}
                 className="w-full h-auto object-contain border-2 border-slate-900 rounded-xl"
               />
             ) : (
