@@ -102,14 +102,16 @@ export default function CheckoutPage() {
   // Pricing States
   const [price, setPrice] = useState(25000);
   const [adminFee, setAdminFee] = useState(1500);
+  const [paymentEnabled, setPaymentEnabled] = useState(true);
   const totalPayment = price + adminFee;
 
   useEffect(() => {
     setIsMounted(true);
-    // Fetch dynamic pricing
+    // Fetch dynamic pricing and payment toggle
     settingsApi.getPublic().then((res) => {
       if (res.session_price !== undefined) setPrice(res.session_price);
       if (res.service_fee !== undefined) setAdminFee(res.service_fee);
+      if (res.payment_enabled !== undefined) setPaymentEnabled(res.payment_enabled);
     }).catch(console.error);
   }, []);
 
@@ -478,6 +480,31 @@ export default function CheckoutPage() {
     toast.success('Berhasil disalin ke clipboard!');
   };
 
+  // ── Free session (payment disabled by admin) ─────────────────────────────
+  const handleFreeSession = async () => {
+    if (!sessionId) {
+      toast.error('Sesi aktif tidak ditemukan.');
+      return;
+    }
+    setIsInitiatingPayment(true);
+    try {
+      await syncPhotosToServer(sessionId);
+      const finalStripBlob = await renderStripBlob();
+      await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob);
+      toast.success('Foto berhasil diproses!');
+      localStorage.removeItem('arranged_slots');
+      localStorage.removeItem('captured_photos');
+      localStorage.removeItem('selected_frame');
+      localStorage.removeItem('active_session_id');
+      router.push(`/result/${sessionId}`);
+    } catch (err: any) {
+      console.error('Free session error:', err);
+      toast.error(err?.message || 'Gagal memproses foto. Silakan coba lagi.');
+    } finally {
+      setIsInitiatingPayment(false);
+    }
+  };
+
   if (!isMounted || !selectedFrame) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-[#1D1D23]">
@@ -594,39 +621,70 @@ export default function CheckoutPage() {
 
         {/* Rincian Harga & Tombol Bayar */}
         <div className="mt-6">
-          <div className="border-t-3 border-dashed border-slate-900 pt-4 mb-4 flex flex-col gap-2">
-            <div className="flex justify-between text-sm font-bold text-slate-600">
-              <span>Biaya Cetak Digital</span>
-              <span>Rp {price.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between text-sm font-bold text-slate-600">
-              <span>Biaya Layanan</span>
-              <span>Rp {adminFee.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between text-lg font-black text-slate-900 border-t-2 border-slate-200 pt-2 mt-1">
-              <span>Total Pembayaran</span>
-              <span>Rp {totalPayment.toLocaleString('id-ID')}</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handlePayNow}
-            disabled={isInitiatingPayment}
-            className="w-full py-4.5 rounded-2xl font-extrabold text-lg border-4 border-slate-900 bg-[#8A2BE2] text-white shadow-[4px_4px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_#1D1D23] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
-          >
-            {isInitiatingPayment ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                MEMPROSES PEMBAYARAN...
-              </>
-            ) : (
-              'BAYAR SEKARANG'
-            )}
-          </button>
-          
-          <p className="text-[10px] text-center text-gray-500 font-bold mt-3 uppercase tracking-wider flex items-center justify-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Transaksi Aman & Terenkripsi
-          </p>
+          {paymentEnabled ? (
+            // ── MODE BERBAYAR ──
+            <>
+              <div className="border-t-3 border-dashed border-slate-900 pt-4 mb-4 flex flex-col gap-2">
+                <div className="flex justify-between text-sm font-bold text-slate-600">
+                  <span>Biaya Cetak Digital</span>
+                  <span>Rp {price.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-slate-600">
+                  <span>Biaya Layanan</span>
+                  <span>Rp {adminFee.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-lg font-black text-slate-900 border-t-2 border-slate-200 pt-2 mt-1">
+                  <span>Total Pembayaran</span>
+                  <span>Rp {totalPayment.toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+              <button
+                onClick={handlePayNow}
+                disabled={isInitiatingPayment}
+                className="w-full py-4.5 rounded-2xl font-extrabold text-lg border-4 border-slate-900 bg-[#8A2BE2] text-white shadow-[4px_4px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_#1D1D23] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+              >
+                {isInitiatingPayment ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    MEMPROSES PEMBAYARAN...
+                  </>
+                ) : (
+                  'BAYAR SEKARANG'
+                )}
+              </button>
+              <p className="text-[10px] text-center text-gray-500 font-bold mt-3 uppercase tracking-wider flex items-center justify-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Transaksi Aman & Terenkripsi
+              </p>
+            </>
+          ) : (
+            // ── MODE GRATIS (payment dinonaktifkan admin) ──
+            <>
+              <div className="border-t-3 border-dashed border-slate-900 pt-4 mb-4">
+                <div className="flex justify-between text-lg font-black text-emerald-700">
+                  <span>Total Pembayaran</span>
+                  <span>GRATIS 🎉</span>
+                </div>
+                <p className="text-xs text-emerald-600 font-bold mt-1">Pembayaran sedang dinonaktifkan oleh admin.</p>
+              </div>
+              <button
+                onClick={handleFreeSession}
+                disabled={isInitiatingPayment}
+                className="w-full py-4.5 rounded-2xl font-extrabold text-lg border-4 border-slate-900 bg-emerald-500 text-white shadow-[4px_4px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_#1D1D23] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+              >
+                {isInitiatingPayment ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    MEMPROSES FOTO...
+                  </>
+                ) : (
+                  'PROSES & LIHAT HASIL →'
+                )}
+              </button>
+              <p className="text-[10px] text-center text-gray-500 font-bold mt-3 uppercase tracking-wider flex items-center justify-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Tidak diperlukan pembayaran
+              </p>
+            </>
+          )}
         </div>
       </div>
 
