@@ -5,9 +5,11 @@ import { useParams } from 'next/navigation';
 import { sessionsApi } from '@/lib/api';
 import { Download, Camera, Image as ImageIcon, Loader2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
-  ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
-  : 'https://e942-103-224-73-153.ngrok-free.app';
+const BACKEND_URL = (() => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && !apiUrl.startsWith('/')) return apiUrl.replace('/api', '');
+  return '';
+})();
 
 const getImageUrl = (pathOrUrl: string | undefined) => {
   if (!pathOrUrl) return '';
@@ -17,6 +19,7 @@ const getImageUrl = (pathOrUrl: string | undefined) => {
 
 const proxyImageUrl = (url: string): string => {
   if (!url) return '';
+  if (url.startsWith('/')) return url; // relative — Next.js rewrite handles it
   return `/api/proxy-image?url=${encodeURIComponent(url)}`;
 };
 

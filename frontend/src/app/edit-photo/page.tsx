@@ -52,13 +52,14 @@ type SlotData = {
 
 const BACKEND_URL = (() => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (apiUrl) return apiUrl.replace(/\/api\/?$/, '');
-  return 'https://e942-103-224-73-153.ngrok-free.app';
+  if (apiUrl && !apiUrl.startsWith('/')) return apiUrl.replace(/\/api\/?$/, '');
+  return '';
 })();
 
 // Route semua gambar frame melalui proxy agar header ngrok bypass dikirim dari server
 const proxyImageUrl = (targetUrl: string): string => {
   if (!targetUrl) return '';
+  if (targetUrl.startsWith('/')) return targetUrl; // relative — Next.js rewrite handles it
   return `/api/proxy-image?url=${encodeURIComponent(targetUrl)}`;
 };
 

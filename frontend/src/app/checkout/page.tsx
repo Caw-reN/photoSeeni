@@ -36,7 +36,11 @@ type SlotData = {
   translateY: number;
 };
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'https://e942-103-224-73-153.ngrok-free.app';
+const BACKEND_URL = (() => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && !apiUrl.startsWith('/')) return apiUrl.replace('/api', '');
+  return '';
+})();
 
 const getImageUrl = (pathOrUrl: string | undefined) => {
   if (!pathOrUrl) return '';
@@ -46,6 +50,7 @@ const getImageUrl = (pathOrUrl: string | undefined) => {
 
 const proxyImageUrl = (targetUrl: string): string => {
   if (!targetUrl) return '';
+  if (targetUrl.startsWith('/')) return targetUrl; // relative — Next.js rewrite handles it
   return `/api/proxy-image?url=${encodeURIComponent(targetUrl)}`;
 };
 

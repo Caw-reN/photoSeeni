@@ -18,9 +18,11 @@ import {
 import Link from 'next/link';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
-  ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
-  : 'https://e942-103-224-73-153.ngrok-free.app';
+const BACKEND_URL = (() => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && !apiUrl.startsWith('/')) return apiUrl.replace('/api', '');
+  return '';
+})();
 
 const getImageUrl = (pathOrUrl: string | undefined) => {
   if (!pathOrUrl) return '';
@@ -30,6 +32,7 @@ const getImageUrl = (pathOrUrl: string | undefined) => {
 
 const proxyImageUrl = (url: string): string => {
   if (!url) return '';
+  if (url.startsWith('/')) return url; // relative URL — Next.js rewrites handle it
   return `/api/proxy-image?url=${encodeURIComponent(url)}`;
 };
 

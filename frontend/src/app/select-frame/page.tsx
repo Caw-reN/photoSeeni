@@ -30,32 +30,36 @@ type Frame = {
 
 const BACKEND_URL = (() => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (apiUrl) {
+  if (apiUrl && !apiUrl.startsWith('/')) {
+    // absolute URL like http://...:8000/api
     return apiUrl.replace(/\/api\/?$/, '');
   }
-  return 'https://e942-103-224-73-153.ngrok-free.app';
+  // relative /api means Next.js rewrites handle proxying — no backend host needed
+  return '';
 })();
 
 // Wrap image URLs through Next.js proxy to add ngrok bypass header
 // (browser <img> tags cannot send custom headers directly)
 const proxyImageUrl = (targetUrl: string): string => {
   if (!targetUrl) return '';
+  // If already a relative URL, the Next.js rewrite proxy will handle it directly
+  if (targetUrl.startsWith('/')) return targetUrl;
   return `/api/proxy-image?url=${encodeURIComponent(targetUrl)}`;
 };
 
 const getFrameImageUrl = (frame: Frame): string => {
   // Build the direct backend URL first, then proxy it
-  let directUrl = '';
   if (frame.id) {
-    directUrl = `${BACKEND_URL}/api/frame-templates/${frame.id}/image`;
+    const directUrl = `${BACKEND_URL}/api/frame-templates/${frame.id}/image`;
+    return proxyImageUrl(directUrl);
   } else if (frame.image_url && frame.image_url.startsWith('http')) {
-    directUrl = frame.image_url;
+    return proxyImageUrl(frame.image_url);
   } else {
     const path = frame.image_url || frame.image_path;
     if (!path) return '';
-    directUrl = path.startsWith('http') ? path : `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    const directUrl = path.startsWith('http') ? path : `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    return proxyImageUrl(directUrl);
   }
-  return proxyImageUrl(directUrl);
 };
 
 
