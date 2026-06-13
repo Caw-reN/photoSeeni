@@ -144,6 +144,7 @@ export default function BoothPage() {
     setIsLoading(true);
     setError(null);
     setCameraReady(false);
+    console.log('[CAMERA INIT] Start initCamera');
 
     try {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -159,6 +160,7 @@ export default function BoothPage() {
         videoConstraints.deviceId = { exact: devId };
       }
 
+      console.log('[CAMERA INIT] Constraints:', videoConstraints);
       const getUserMediaPromise = navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
         audio: false,
@@ -167,32 +169,41 @@ export default function BoothPage() {
         setTimeout(() => reject(new Error('TIMEOUT: 10 detik tidak ada respons')), 10000);
       });
 
+      console.log('[CAMERA INIT] Waiting for getUserMedia...');
       const newStream = await Promise.race([getUserMediaPromise, timeoutPromise]);
+      console.log('[CAMERA INIT] getUserMedia resolved');
       streamRef.current = newStream;
 
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        setVideoDevices(devices.filter((d) => d.kind === 'videoinput'));
-      } catch {}
-
       if (videoRef.current) {
+        console.log('[CAMERA INIT] Attaching stream to videoRef');
         videoRef.current.srcObject = newStream;
         videoRef.current.play().catch((e) => console.log('Play error:', e));
         setCameraReady(true);
         setIsLoading(false);
       } else {
+        console.log('[CAMERA INIT] videoRef is null, waiting 500ms');
         setTimeout(() => {
           if (videoRef.current) {
+            console.log('[CAMERA INIT] Attaching stream after timeout');
             videoRef.current.srcObject = newStream;
             videoRef.current.play().catch(() => {});
             setCameraReady(true);
           } else {
+            console.log('[CAMERA INIT] videoRef still null!');
             setError('Video element not found');
           }
           setIsLoading(false);
         }, 500);
       }
+
+      try {
+        console.log('[CAMERA INIT] Enumerating devices');
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setVideoDevices(devices.filter((d) => d.kind === 'videoinput'));
+        console.log('[CAMERA INIT] Enumeration done');
+      } catch {}
     } catch (err: any) {
+      console.error('[CAMERA INIT] Caught error:', err);
       const errName = err?.name ?? 'UnknownError';
       const errMsg = err?.message ?? '';
       let errorMessage = `Camera Error: ${errName}\n${errMsg}`;
