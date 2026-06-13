@@ -63,20 +63,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: builder   # Use 'runner' for production
+      target: runner
     restart: unless-stopped
     working_dir: /app
-    # Override to run dev server with hot-reload (development mode)
-    command: sh -c "npm run dev"
+    command: sh -c "node server.js"
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://localhost:8000/api
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
     depends_on:
       - backend
     networks:
