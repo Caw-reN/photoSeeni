@@ -107,7 +107,7 @@ export default function SelectFramePage() {
         setError(null);
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || `${BACKEND_URL}/api`;
-        const res = await fetch(`${apiUrl}/frames`, {
+        const res = await fetch(`${apiUrl}/frame-templates`, {
           method: 'GET',
           mode: 'cors',
           headers: {
