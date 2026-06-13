@@ -69,7 +69,6 @@ services:
     command: sh -c "node server.js"
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api
     ports:
       - "3000:3000"
     depends_on:
