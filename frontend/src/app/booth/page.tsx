@@ -149,8 +149,7 @@ export default function BoothPage() {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const videoConstraints: MediaTrackConstraints = {
         width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        aspectRatio: { ideal: 1.7777777778 }
+        height: { ideal: 1080 }
       };
 
       if (fMode) {
@@ -178,7 +177,7 @@ export default function BoothPage() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
-        try { await videoRef.current.play(); } catch {}
+        videoRef.current.play().catch((e) => console.log('Play error:', e));
         setCameraReady(true);
         setIsLoading(false);
       } else {
