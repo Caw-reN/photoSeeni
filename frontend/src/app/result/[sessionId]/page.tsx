@@ -225,6 +225,8 @@ export default function ResultPage() {
 
       ctx.drawImage(frameOverlay, 0, 0, canvas.width, canvas.height);
       setCanvasDataUrl(canvas.toDataURL('image/jpeg', 0.95));
+      // Clean up arranged_slots now that canvas is rendered
+      localStorage.removeItem('arranged_slots');
     } catch (err: any) {
       console.error('Canvas render error:', err);
       setRenderError(err?.message || 'Gagal merender strip.');

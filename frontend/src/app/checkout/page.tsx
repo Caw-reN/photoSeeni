@@ -212,8 +212,7 @@ export default function CheckoutPage() {
             
             setTimeout(() => {
               setShowPaymentModal(false);
-              // Clean up local storage
-              localStorage.removeItem('arranged_slots');
+              // Clean up local storage (keep arranged_slots for result page to re-render)
               localStorage.removeItem('captured_photos');
               localStorage.removeItem('selected_frame');
               localStorage.removeItem('active_session_id');
@@ -227,7 +226,7 @@ export default function CheckoutPage() {
             localStorage.removeItem('pending_payment'); // clear persisted QR
             setTimeout(() => {
               setShowPaymentModal(false);
-              localStorage.removeItem('arranged_slots');
+              // Keep arranged_slots for result page to re-render correctly
               localStorage.removeItem('captured_photos');
               localStorage.removeItem('selected_frame');
               localStorage.removeItem('active_session_id');
@@ -485,8 +484,7 @@ export default function CheckoutPage() {
         
         setTimeout(() => {
           setShowPaymentModal(false);
-          // Clean up local storage
-          localStorage.removeItem('arranged_slots');
+          // Keep arranged_slots for result page to re-render correctly
           localStorage.removeItem('captured_photos');
           localStorage.removeItem('selected_frame');
           localStorage.removeItem('active_session_id');
@@ -527,7 +525,7 @@ export default function CheckoutPage() {
       const finalStripBlob = await renderStripBlob();
       await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob);
       toast.success('Foto berhasil diproses!');
-      localStorage.removeItem('arranged_slots');
+      // Keep arranged_slots for result page to re-render correctly
       localStorage.removeItem('captured_photos');
       localStorage.removeItem('selected_frame');
       localStorage.removeItem('active_session_id');
