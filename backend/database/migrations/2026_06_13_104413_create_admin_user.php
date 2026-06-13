@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Insert admin user        DB::table('users')->insertOrIgnore([
+        // Insert admin user
+        DB::table('users')->insertOrIgnore([
             'name' => 'Admin',
             'email' => 'admin@admin.com',
             'password' => Hash::make('ijjuuiue'),
