@@ -253,3 +253,142 @@ export const adminApi = {
     body: JSON.stringify(data),
   }),
 };
+
+// ─────────────────────────────────────────────
+// Events API
+// ─────────────────────────────────────────────
+export const eventsApi = {
+  // Public: get event info + packages by slug
+  getEvent: (slug: string) => apiRequest(`/events/${slug}`),
+  getPackages: (slug: string) => apiRequest(`/events/${slug}/packages`),
+
+  // Public: purchase a package → get QRIS + redeem code
+  purchase: (slug: string, data: {
+    event_package_id: number;
+    buyer_name: string;
+    buyer_email?: string;
+    buyer_phone?: string;
+    return_url?: string;
+  }) => apiRequest(`/events/${slug}/purchase`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+
+  // Public: poll payment status for a redeem code purchase
+  checkPurchaseStatus: (code: string) => apiRequest('/events/redeem/payment-status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  }),
+
+  // Public: validate redeem code
+  validateCode: (code: string) => apiRequest('/events/redeem/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  }),
+
+  // Public: start a photoshoot session with a valid code
+  startSession: (code: string) => apiRequest('/events/redeem/start-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  }),
+
+  // Public: get photo result by redeem code
+  getResult: (code: string) => apiRequest(`/events/redeem/${code}/result`),
+
+  // ── Admin ──
+  adminListEvents: (params?: { page?: number; search?: string; is_active?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', params.page.toString());
+    if (params?.search) qs.set('search', params.search);
+    if (params?.is_active !== undefined) qs.set('is_active', params.is_active ? '1' : '0');
+    return apiRequest(`/admin/events${qs.toString() ? `?${qs}` : ''}`);
+  },
+
+  adminCreateEvent: (data: {
+    name: string;
+    organizer_name: string;
+    description?: string;
+    location?: string;
+    event_date?: string;
+    frame_template_id?: number | null;
+    is_active?: boolean;
+    expires_at?: string | null;
+  }) => apiRequest('/admin/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+
+  adminUpdateEvent: (eventId: number, data: Partial<{
+    name: string;
+    organizer_name: string;
+    description: string;
+    location: string;
+    event_date: string;
+    frame_template_id: number | null;
+    is_active: boolean;
+    expires_at: string | null;
+  }>) => apiRequest(`/admin/events/${eventId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+
+  adminDeleteEvent: (eventId: number) => apiRequest(`/admin/events/${eventId}`, {
+    method: 'DELETE',
+  }),
+
+  adminGetEventStats: (eventId: number) => apiRequest(`/admin/events/${eventId}/stats`),
+
+  // Admin packages
+  adminCreatePackage: (eventId: number, data: {
+    name: string;
+    description?: string;
+    price: number;
+    photo_count: number;
+    frame_template_id?: number | null;
+    is_active?: boolean;
+    sort_order?: number;
+  }) => apiRequest(`/admin/events/${eventId}/packages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+
+  adminUpdatePackage: (eventId: number, packageId: number, data: Partial<{
+    name: string;
+    description: string;
+    price: number;
+    photo_count: number;
+    frame_template_id: number | null;
+    is_active: boolean;
+    sort_order: number;
+  }>) => apiRequest(`/admin/events/${eventId}/packages/${packageId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+
+  adminDeletePackage: (eventId: number, packageId: number) =>
+    apiRequest(`/admin/events/${eventId}/packages/${packageId}`, { method: 'DELETE' }),
+
+  // Admin redeem codes list
+  adminListRedeemCodes: (eventId: number, params?: {
+    page?: number;
+    payment_status?: string;
+    is_used?: boolean;
+    search?: string;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', params.page.toString());
+    if (params?.payment_status) qs.set('payment_status', params.payment_status);
+    if (params?.is_used !== undefined) qs.set('is_used', params.is_used ? '1' : '0');
+    if (params?.search) qs.set('search', params.search);
+    return apiRequest(`/admin/events/${eventId}/redeem-codes${qs.toString() ? `?${qs}` : ''}`);
+  },
+};
+

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Frame;
 use App\Models\Photo;
 use App\Models\PhotoSession;
+use App\Models\EventRedeemCode;
 use Illuminate\Http\Request;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
@@ -119,6 +120,10 @@ class PhotoSessionController extends Controller
                 'status' => 'completed',
                 'final_image_path' => $path,
             ]);
+
+            // If this is an event session, send result notification to buyer
+            $this->maybeNotifyEventResult($session);
+
             return response()->json([
                 'session' => $session->load(['frame', 'photos']),
                 'final_image_url' => Storage::disk('public')->url($path),
@@ -134,10 +139,27 @@ class PhotoSessionController extends Controller
             ]);
         }
 
+        // If this is an event session, send result notification to buyer
+        $this->maybeNotifyEventResult($session);
+
         return response()->json([
             'session' => $session->load(['frame', 'photos']),
             'final_image_url' => Storage::disk('public')->url($session->final_image_path),
         ]);
+    }
+
+    /**
+     * If the session is tied to an event redeem code, send the result link notification.
+     */
+    private function maybeNotifyEventResult(PhotoSession $session): void
+    {
+        if (!$session->event_redeem_code_id) return;
+
+        $redeemCode = EventRedeemCode::with('event')->find($session->event_redeem_code_id);
+        if ($redeemCode && !$redeemCode->result_notified_at) {
+            $controller = new EventRedeemController();
+            $controller->sendResultNotification($redeemCode);
+        }
     }
 
     public function show($sessionId)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CreditCard, QrCode, Wallet, ShieldCheck, Loader2, CheckCircle2, Copy, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Wallet, ShieldCheck, Loader2, CheckCircle2, Copy, AlertCircle, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { sessionsApi, settingsApi } from '@/lib/api';
 
@@ -105,8 +105,18 @@ export default function CheckoutPage() {
   const [paymentEnabled, setPaymentEnabled] = useState(true);
   const totalPayment = price + adminFee;
 
+  // Event mode: session already paid via redeem code
+  const [isEventSession, setIsEventSession] = useState(false);
+  const [eventRedeemCode, setEventRedeemCode] = useState<string | null>(null);
+
   useEffect(() => {
     setIsMounted(true);
+    // Detect event mode
+    const storedRedeemCode = localStorage.getItem('event_redeem_code');
+    if (storedRedeemCode) {
+      setIsEventSession(true);
+      setEventRedeemCode(storedRedeemCode);
+    }
     // Fetch dynamic pricing and payment toggle
     settingsApi.getPublic().then((res) => {
       if (res.session_price !== undefined) setPrice(res.session_price);
@@ -654,7 +664,38 @@ export default function CheckoutPage() {
 
         {/* Rincian Harga & Tombol Bayar */}
         <div className="mt-6">
-          {paymentEnabled ? (
+          {isEventSession ? (
+            // ── MODE EVENT (sudah bayar via redeem code) ──
+            <>
+              <div className="border-t-3 border-dashed border-slate-900 pt-4 mb-4">
+                <div className="bg-purple-50 border-2 border-[#8A2BE2] rounded-xl p-3 mb-4">
+                  <p className="text-xs font-black text-[#8A2BE2] uppercase tracking-wide flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" /> Sesi Event — Sudah Lunas
+                  </p>
+                  <p className="text-xs text-gray-500 font-medium mt-1">Pembayaran sudah selesai via kode redeem. Langsung proses hasil foto kamu!</p>
+                  {eventRedeemCode && <p className="text-xs font-mono font-black text-[#8A2BE2] mt-1">Kode: {eventRedeemCode}</p>}
+                </div>
+                <div className="flex justify-between text-lg font-black text-emerald-700">
+                  <span>Total Pembayaran</span>
+                  <span>LUNAS ✅</span>
+                </div>
+              </div>
+              <button
+                onClick={handleFreeSession}
+                disabled={isInitiatingPayment}
+                className="w-full py-4.5 rounded-2xl font-extrabold text-lg border-4 border-slate-900 bg-[#8A2BE2] text-white shadow-[4px_4px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_#1D1D23] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
+              >
+                {isInitiatingPayment ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> MEMPROSES FOTO...</>
+                ) : (
+                  <><Camera className="w-5 h-5" /> SELESAIKAN & LIHAT HASIL →</>
+                )}
+              </button>
+              <p className="text-[10px] text-center text-gray-500 font-bold mt-3 uppercase tracking-wider flex items-center justify-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Sesi Event — Tanpa Pembayaran Tambahan
+              </p>
+            </>
+          ) : paymentEnabled ? (
             // ── MODE BERBAYAR ──
             <>
               <div className="border-t-3 border-dashed border-slate-900 pt-4 mb-4 flex flex-col gap-2">
@@ -677,10 +718,7 @@ export default function CheckoutPage() {
                 className="w-full py-4.5 rounded-2xl font-extrabold text-lg border-4 border-slate-900 bg-[#8A2BE2] text-white shadow-[4px_4px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_#1D1D23] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 {isInitiatingPayment ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    MEMPROSES PEMBAYARAN...
-                  </>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> MEMPROSES PEMBAYARAN...</>
                 ) : (
                   'BAYAR SEKARANG'
                 )}
@@ -705,10 +743,7 @@ export default function CheckoutPage() {
                 className="w-full py-4.5 rounded-2xl font-extrabold text-lg border-4 border-slate-900 bg-emerald-500 text-white shadow-[4px_4px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_#1D1D23] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 {isInitiatingPayment ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    MEMPROSES FOTO...
-                  </>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> MEMPROSES FOTO...</>
                 ) : (
                   'PROSES & LIHAT HASIL →'
                 )}

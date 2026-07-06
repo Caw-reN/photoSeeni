@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import {
   LayoutDashboard, Frame, Key, Users, Receipt, CreditCard,
-  Loader2, LogOut, Shield, ChevronLeft, PenTool
+  Loader2, LogOut, Shield, ChevronLeft, PenTool, CalendarDays
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -19,6 +19,7 @@ export const useAdmin = () => useContext(AdminContext);
 const tabs = [
   { label: 'Overview', href: '/admin', icon: LayoutDashboard },
   { label: 'Frame Templates', href: '/admin/frames', icon: Frame },
+  { label: 'Events', href: '/admin/events', icon: CalendarDays },
   { label: 'API Keys', href: '/admin/api-keys', icon: Key },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Transactions', href: '/admin/transactions', icon: Receipt },

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Camera,
   FlipHorizontal,
@@ -51,7 +51,7 @@ const getImageUrl = (pathOrUrl: string | undefined) => {
   return `${BACKEND_URL}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
 };
 
-export default function BoothPage() {
+function BoothContent() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,6 +80,13 @@ export default function BoothPage() {
   const [isFlashing, setIsFlashing] = useState(false);
   const [retakeIndex, setRetakeIndex] = useState<number | null>(null);
   const panelDragControls = useDragControls();
+
+  // ── Event mode (from redeem code) ──
+  const searchParams = useSearchParams();
+  const redeemCode = searchParams.get('redeem');
+  const eventSessionId = searchParams.get('session');
+  const isEventMode = !!redeemCode;
+  const [eventInfo, setEventInfo] = useState<{ eventName?: string; packageName?: string; maxPhotos?: number; frameId?: number } | null>(null);
 
   // ── Hydrate photos from localStorage on mount ──
   useEffect(() => {
@@ -239,6 +246,29 @@ export default function BoothPage() {
   useEffect(() => {
     const createSession = async () => {
       try {
+        // ── EVENT MODE: use pre-created session from redeem ──
+        if (isEventMode && eventSessionId) {
+          setSessionId(Number(eventSessionId));
+          localStorage.setItem('active_session_id', eventSessionId);
+
+          // Load event session info (set by /redeem page)
+          const storedInfo = localStorage.getItem('event_session_info');
+          if (storedInfo) {
+            const info = JSON.parse(storedInfo);
+            setEventInfo(info);
+            if (info.maxPhotos) setTotalSlots(info.maxPhotos);
+          }
+
+          // Clear any old photos
+          localStorage.removeItem('captured_photos');
+          localStorage.removeItem('arranged_slots');
+          setCapturedPhotos([]);
+          setCurrentSlot(0);
+          setRetakeIndex(null);
+          return;
+        }
+
+        // ── NORMAL MODE ──
         const storedFrame = localStorage.getItem('selected_frame');
         let frameId: number | undefined;
         if (storedFrame) {
@@ -262,7 +292,7 @@ export default function BoothPage() {
       }
     };
     createSession();
-  }, []);
+  }, [isEventMode, eventSessionId]);
 
   // ── Capture Logic ──
   const capturePhoto = useCallback(async () => {
@@ -840,5 +870,13 @@ export default function BoothPage() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+export default function BoothPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-[#8A2BE2]" /></div>}>
+      <BoothContent />
+    </Suspense>
   );
 }
