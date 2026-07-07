@@ -146,6 +146,49 @@ export default function SelectFramePage() {
           }
         }
 
+        // Check if there is an event session info stored
+        const storedInfo = localStorage.getItem('event_session_info');
+        let allowedFrameId: number | null = null;
+        if (storedInfo) {
+          try {
+            const info = JSON.parse(storedInfo);
+            if (info.frameId) {
+              allowedFrameId = Number(info.frameId);
+            }
+          } catch (e) {
+            console.error('Failed to parse event_session_info:', e);
+          }
+        }
+
+        // Filter frames if in event mode and frameId is restricted
+        if (allowedFrameId !== null) {
+          const filteredList = framesList.filter(f => f.id === allowedFrameId);
+          if (filteredList.length > 0) {
+            framesList = filteredList;
+          } else {
+            // If the event frame template is not in the list, fetch it directly
+            try {
+              const singleRes = await fetch(`${apiUrl}/frame-templates/${allowedFrameId}`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'ngrok-skip-browser-warning': '69420'
+                }
+              });
+              if (singleRes.ok) {
+                const singleData = await singleRes.json();
+                if (singleData && singleData.data) {
+                  framesList = [singleData.data];
+                }
+              }
+            } catch (e) {
+              console.error('Failed to fetch specific event frame template:', e);
+            }
+          }
+        }
+
         setFrames(framesList);
         if (framesList.length > 0) {
           setSelectedFrame(framesList[0]);

@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://e942-103-224-73-153.ngrok-free.app/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://e31a-103-224-73-153.ngrok-free.app/api';
 
 const getHeaders = () => {
   const headers: HeadersInit = {
@@ -157,12 +157,15 @@ export const sessionsApi = {
     });
   },
 
-  complete: (sessionId: number, frameId?: number, finalStripBlob?: Blob) => {
+  complete: (sessionId: number, frameId?: number, finalStripBlob?: Blob, gifSpeed?: number) => {
     if (finalStripBlob) {
       const formData = new FormData();
       formData.append('final_strip', finalStripBlob, 'final_strip.jpg');
       if (frameId) {
         formData.append('frame_id', frameId.toString());
+      }
+      if (gifSpeed) {
+        formData.append('gif_speed', gifSpeed.toString());
       }
       return apiRequest(`/sessions/${sessionId}/complete`, {
         method: 'POST',
@@ -173,7 +176,10 @@ export const sessionsApi = {
     return apiRequest(`/sessions/${sessionId}/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: frameId ? JSON.stringify({ frame_id: frameId }) : undefined,
+      body: JSON.stringify({
+        frame_id: frameId,
+        gif_speed: gifSpeed,
+      }),
     });
   },
 

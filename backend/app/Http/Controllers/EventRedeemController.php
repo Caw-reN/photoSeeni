@@ -307,6 +307,7 @@ class EventRedeemController extends Controller
             'event_id'              => $redeemCode->event_id,
             'event_redeem_code_id'  => $redeemCode->id,
             'max_photos'            => $redeemCode->package->photo_count,
+            'session_duration'      => $redeemCode->package->session_duration ?? 180,
             'payment_status'        => 'paid', // Already paid via event purchase
         ]);
 

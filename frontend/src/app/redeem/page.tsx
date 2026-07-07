@@ -52,11 +52,13 @@ export default function RedeemPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('active_session_id', String(res.session.id));
         localStorage.setItem('event_redeem_code', trimmed);
+        localStorage.setItem('event_session_start_time', String(Date.now()));
         localStorage.setItem('event_session_info', JSON.stringify({
           eventName: res.event?.name,
           packageName: res.package?.name,
           maxPhotos: res.package?.photo_count,
           frameId: res.session.frame_id,
+          sessionDuration: res.session.session_duration,
         }));
       }
       toast.success('Sesi foto dimulai!');

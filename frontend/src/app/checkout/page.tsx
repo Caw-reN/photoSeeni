@@ -186,6 +186,35 @@ export default function CheckoutPage() {
     }
   }, [isMounted, router]);
 
+  // Auto-complete event session if detected
+  useEffect(() => {
+    if (!isMounted || !isEventSession || !sessionId || !selectedFrame) return;
+
+    const autoProcessEventSession = async () => {
+      setIsInitiatingPayment(true);
+      try {
+        await syncPhotosToServer(sessionId);
+        const finalStripBlob = await renderStripBlob();
+        await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlob, 150);
+        toast.success('Foto berhasil diproses!');
+        
+        // Clean up session info
+        localStorage.removeItem('captured_photos');
+        localStorage.removeItem('selected_frame');
+        localStorage.removeItem('active_session_id');
+        localStorage.removeItem('event_gif_speed');
+        
+        router.push(`/result/${sessionId}`);
+      } catch (err: any) {
+        console.error('Auto event session processing error:', err);
+        toast.error(err?.message || 'Gagal memproses foto event.');
+        setIsInitiatingPayment(false);
+      }
+    };
+
+    autoProcessEventSession();
+  }, [isMounted, isEventSession, sessionId, selectedFrame]);
+
   // Countdown timer for simulated payment gateway
   useEffect(() => {
     if (!showPaymentModal || paymentStep !== 'details') return;
@@ -214,7 +243,7 @@ export default function CheckoutPage() {
             // Render the custom strip matching coordinates and adjustments on client
             const finalStripBlob = await renderStripBlob();
             // Complete the session and upload the custom strip
-            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob);
+            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob, 150);
             
             toast.success('Pembayaran sukses & foto berhasil diproses!');
             setPaymentStep('success');
@@ -226,6 +255,7 @@ export default function CheckoutPage() {
               localStorage.removeItem('captured_photos');
               localStorage.removeItem('selected_frame');
               localStorage.removeItem('active_session_id');
+              localStorage.removeItem('event_gif_speed');
               // Navigate to online result page
               router.push(`/result/${sessionId}`);
             }, 2000);
@@ -488,7 +518,7 @@ export default function CheckoutPage() {
         const finalStripBlob = await renderStripBlob();
 
         // Complete the session in the backend so it composites the strip
-        await sessionsApi.complete(Number(activeSession), selectedFrame.id, finalStripBlob);
+        await sessionsApi.complete(Number(activeSession), selectedFrame.id, finalStripBlob, 150);
         toast.success('Pembayaran sukses & foto berhasil diproses!');
         setPaymentStep('success');
         
@@ -498,6 +528,7 @@ export default function CheckoutPage() {
           localStorage.removeItem('captured_photos');
           localStorage.removeItem('selected_frame');
           localStorage.removeItem('active_session_id');
+          localStorage.removeItem('event_gif_speed');
           // Navigate to online result page
           router.push(`/result/${activeSession}`);
         }, 2000);
@@ -533,12 +564,13 @@ export default function CheckoutPage() {
     try {
       await syncPhotosToServer(sessionId);
       const finalStripBlob = await renderStripBlob();
-      await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob);
+      await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob, 150);
       toast.success('Foto berhasil diproses!');
       // Keep arranged_slots for result page to re-render correctly
       localStorage.removeItem('captured_photos');
       localStorage.removeItem('selected_frame');
       localStorage.removeItem('active_session_id');
+      localStorage.removeItem('event_gif_speed');
       router.push(`/result/${sessionId}`);
     } catch (err: any) {
       console.error('Free session error:', err);
@@ -548,7 +580,18 @@ export default function CheckoutPage() {
     }
   };
 
-  if (!isMounted || !selectedFrame) {
+  if (!isMounted) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-[#1D1D23]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-[#8A2BE2] animate-spin" />
+          <p className="text-white font-bold text-lg">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedFrame) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-[#1D1D23]">
         <div className="flex flex-col items-center gap-4">
@@ -561,6 +604,27 @@ export default function CheckoutPage() {
 
   return (
     <div className="w-full min-h-screen md:h-screen bg-[#FFFDF7] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
+      {/* ── Overlays ── */}
+      {isEventSession && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#FFFDF7]">
+          <div className="max-w-md w-full px-6 text-center flex flex-col items-center gap-6">
+            <div className="relative">
+              <div className="w-20 h-20 border-8 border-[#8A2BE2] border-t-transparent rounded-full animate-spin flex items-center justify-center" />
+              <Camera className="w-8 h-8 text-[#8A2BE2] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-[#1D1D23] uppercase tracking-tight animate-pulse">Memproses Foto Event</h2>
+              <p className="text-sm font-semibold text-gray-500">
+                Sedang menggabungkan foto Anda ke dalam frame. Silakan tunggu beberapa saat...
+              </p>
+            </div>
+            <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4 w-full text-xs font-bold text-[#8A2BE2] flex items-center justify-center gap-2 shadow-[3px_3px_0px_#1D1D23]">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-bounce" />
+              Sesi Event Lunas — Menuju Halaman Hasil Foto
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* ═══ Tombol Kembali (pojok kiri atas) ═══ */}
       <button

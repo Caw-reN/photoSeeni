@@ -14,6 +14,7 @@ import {
   Camera,
   RefreshCw,
   AlertCircle,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -445,42 +446,53 @@ export default function ResultPage() {
             </div>
           )}
 
-          {/* Download — pakai canvas jika berhasil, fallback ke server */}
-          <button
-            onClick={handleDownload}
-            disabled={(!canvasDataUrl && !session.final_image_url) || isRendering}
-            className="neobrutal-button w-full py-5 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isRendering ? (
-              <><Loader2 className="w-6 h-6 animate-spin" /> Merender HD...</>
-            ) : (
-              <><Download className="w-6 h-6" /> {canvasDataUrl ? 'Download Strip HD' : 'Download Photo'}</>
-            )}
-          </button>
+          {session?.event ? (
+            <Link
+              href={`/event/${session.event.slug}`}
+              className="neobrutal-button w-full py-5 bg-amber-400 text-[#1D1D23] hover:bg-amber-300 flex items-center justify-center gap-3 text-lg font-black uppercase tracking-wider shadow-[4px_4px_0px_#1D1D23]"
+            >
+              <Calendar className="w-6 h-6" strokeWidth={2.5} /> Kembali ke Event
+            </Link>
+          ) : (
+            <>
+              {/* Download — pakai canvas jika berhasil, fallback ke server */}
+              <button
+                onClick={handleDownload}
+                disabled={(!canvasDataUrl && !session.final_image_url) || isRendering}
+                className="neobrutal-button w-full py-5 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isRendering ? (
+                  <><Loader2 className="w-6 h-6 animate-spin" /> Merender HD...</>
+                ) : (
+                  <><Download className="w-6 h-6" /> {canvasDataUrl ? 'Download Strip HD' : 'Download Photo'}</>
+                )}
+              </button>
 
-          {/* Share */}
-          <button
-            onClick={handleShare}
-            className="neobrutal-button w-full py-5 bg-[#3B82F6] text-white hover:bg-[#4f8ff7] flex items-center justify-center gap-3 text-lg"
-          >
-            <Share2 className="w-6 h-6" /> Share Result
-          </button>
+              {/* Share */}
+              <button
+                onClick={handleShare}
+                className="neobrutal-button w-full py-5 bg-[#3B82F6] text-white hover:bg-[#4f8ff7] flex items-center justify-center gap-3 text-lg"
+              >
+                <Share2 className="w-6 h-6" /> Share Result
+              </button>
 
-          <div className="my-4 border-t-2 border-dashed border-gray-300" />
+              <div className="my-4 border-t-2 border-dashed border-gray-300" />
 
-          <Link
-            href="/booth"
-            className="neobrutal-button w-full py-4 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] flex items-center justify-center gap-3"
-          >
-            <Camera className="w-5 h-5" /> Take Another One!
-          </Link>
+              <Link
+                href="/booth"
+                className="neobrutal-button w-full py-4 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] flex items-center justify-center gap-3"
+              >
+                <Camera className="w-5 h-5" /> Take Another One!
+              </Link>
 
-          <Link
-            href="/"
-            className="neobrutal-button w-full py-4 bg-gray-100 text-[#1D1D23] hover:bg-gray-200 flex items-center justify-center gap-3"
-          >
-            <Home className="w-5 h-5" /> Back to Home
-          </Link>
+              <Link
+                href="/"
+                className="neobrutal-button w-full py-4 bg-gray-100 text-[#1D1D23] hover:bg-gray-200 flex items-center justify-center gap-3"
+              >
+                <Home className="w-5 h-5" /> Back to Home
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </div>

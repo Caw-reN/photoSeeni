@@ -27,11 +27,15 @@ class PhotoSession extends Model
         'event_id',
         'event_redeem_code_id',
         'max_photos',
+        'gif_speed',
+        'session_duration',
     ];
 
     protected $casts = [
         'payment_paid_at' => 'datetime',
         'max_photos' => 'integer',
+        'gif_speed' => 'integer',
+        'session_duration' => 'integer',
     ];
 
     public function user(): BelongsTo

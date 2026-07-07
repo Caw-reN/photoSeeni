@@ -43,7 +43,7 @@ type Frame = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
-  : 'https://e942-103-224-73-153.ngrok-free.app';
+  : 'https://e31a-103-224-73-153.ngrok-free.app';
 
 const getImageUrl = (pathOrUrl: string | undefined) => {
   if (!pathOrUrl) return '';
@@ -79,6 +79,7 @@ function BoothContent() {
   const [isAutoCapturing, setIsAutoCapturing] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [retakeIndex, setRetakeIndex] = useState<number | null>(null);
+  const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number | null>(null);
   const panelDragControls = useDragControls();
 
   // ── Event mode (from redeem code) ──
@@ -257,6 +258,16 @@ function BoothContent() {
             const info = JSON.parse(storedInfo);
             setEventInfo(info);
             if (info.maxPhotos) setTotalSlots(info.maxPhotos);
+            if (info.sessionDuration) {
+              const startTimeStr = localStorage.getItem('event_session_start_time');
+              if (startTimeStr) {
+                const elapsedSeconds = Math.floor((Date.now() - Number(startTimeStr)) / 1000);
+                const remaining = Math.max(0, info.sessionDuration - elapsedSeconds);
+                setSessionTimeRemaining(remaining);
+              } else {
+                setSessionTimeRemaining(info.sessionDuration);
+              }
+            }
           }
 
           // Clear any old photos
@@ -293,6 +304,50 @@ function BoothContent() {
     };
     createSession();
   }, [isEventMode, eventSessionId]);
+
+  // ── Global Session Countdown Timer ──
+  useEffect(() => {
+    if (sessionTimeRemaining === null) return;
+    
+    if (sessionTimeRemaining <= 0) {
+      const handleTimeout = async () => {
+        toast.error('Waktu sesi Anda telah habis!');
+        if (capturedPhotos.length > 0) {
+          try {
+            localStorage.setItem('captured_photos', JSON.stringify(
+              capturedPhotos.map((p) => ({ slot: p.slot, url: p.url }))
+            ));
+          } catch (err) {
+            console.warn('Storage penuh, tidak bisa menyimpan cache foto:', err);
+          }
+          
+          // Stop camera stream tracks
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+          
+          router.push('/select-frame');
+        } else {
+          toast.error('Waktu habis sebelum foto diambil.');
+          // Stop camera stream tracks
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+          router.push('/');
+        }
+      };
+      handleTimeout();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setSessionTimeRemaining(prev => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [sessionTimeRemaining, capturedPhotos, router]);
 
   // ── Capture Logic ──
   const capturePhoto = useCallback(async () => {
@@ -547,6 +602,21 @@ function BoothContent() {
       >
         <X className="w-5 h-5 text-[#1D1D23]" strokeWidth={3} />
       </button>
+
+      {/* ═══ Global Session Timer (Fixed Top-Right) ═══ */}
+      {sessionTimeRemaining !== null && (
+        <div className={`fixed top-4 right-4 z-[60] px-4 py-2 border-2 border-[#1D1D23] rounded-full font-black text-xs uppercase tracking-wide flex items-center gap-2 shadow-[3px_3px_0px_#1D1D23] transition-all ${
+          sessionTimeRemaining < 30
+            ? 'bg-rose-500 text-white animate-pulse'
+            : 'bg-amber-400 text-[#1D1D23]'
+        }`}>
+          <Clock className={`w-4 h-4 ${sessionTimeRemaining < 30 ? 'animate-spin' : ''}`} />
+          <span>
+            {Math.floor(sessionTimeRemaining / 60).toString().padStart(2, '0')}:
+            {(sessionTimeRemaining % 60).toString().padStart(2, '0')}
+          </span>
+        </div>
+      )}
 
       {/* ═══ Exit Modal ═══ */}
       <AnimatePresence>
@@ -841,14 +911,18 @@ function BoothContent() {
                         </span>
                         <span className="text-xl font-extrabold text-indigo-600">{totalSlots} Photos</span>
                       </div>
-                      <input
-                        type="range"
-                        min="3"
-                        max="10"
-                        value={totalSlots}
-                        onChange={(e) => setTotalSlots(Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600"
-                      />
+                      {!isEventMode ? (
+                        <input
+                          type="range"
+                          min="3"
+                          max="10"
+                          value={totalSlots}
+                          onChange={(e) => setTotalSlots(Number(e.target.value))}
+                          className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                        />
+                      ) : (
+                        <p className="text-xs font-semibold text-slate-400 mt-1 italic">Terkunci sesuai paket event</p>
+                      )}
                     </div>
 
                   </div>

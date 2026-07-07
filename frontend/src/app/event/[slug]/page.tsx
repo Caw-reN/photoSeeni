@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Camera, Package, CheckCircle2, Loader2, QrCode, AlertCircle, ArrowLeft, MapPin, Calendar, Building2, ShieldCheck, Copy } from 'lucide-react';
+import { Camera, Package, CheckCircle2, Loader2, QrCode, AlertCircle, ArrowLeft, ArrowRight, MapPin, Calendar, Building2, ShieldCheck, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
 
@@ -35,7 +35,8 @@ export default function EventPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Purchase form
+  // Purchase flow state
+  const [step, setStep] = useState<'package' | 'details'>('package');
   const [selectedPackage, setSelectedPackage] = useState<EventPackage | null>(null);
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
@@ -123,9 +124,30 @@ export default function EventPage() {
     }
   };
 
-  const handleGoToBooth = () => {
+  const handleGoToBooth = async () => {
     if (!purchasedCode) return;
-    router.push(`/booth?redeem=${purchasedCode}`);
+    setIsPurchasing(true);
+    try {
+      const res = await eventsApi.startSession(purchasedCode);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('active_session_id', String(res.session.id));
+        localStorage.setItem('event_redeem_code', purchasedCode);
+        localStorage.setItem('event_session_start_time', String(Date.now()));
+        localStorage.setItem('event_session_info', JSON.stringify({
+          eventName: res.event?.name,
+          packageName: res.package?.name,
+          maxPhotos: res.package?.photo_count,
+          frameId: res.session.frame_id,
+          sessionDuration: res.session.session_duration,
+        }));
+      }
+      toast.success('Sesi foto dimulai!');
+      router.push(`/booth?redeem=${purchasedCode}&session=${res.session.id}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memulai sesi foto.');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   if (isLoading) return (
@@ -161,105 +183,247 @@ export default function EventPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-10">
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Left: Package Selection */}
-          <div>
-            <h2 className="text-xl font-black text-[#1D1D23] mb-4 uppercase tracking-tight">1. Pilih Paket</h2>
-            <div className="flex flex-col gap-3">
-              {event.packages.map(pkg => (
-                <button
-                  key={pkg.id}
-                  onClick={() => setSelectedPackage(pkg)}
-                  className={`text-left p-4 border-3 rounded-2xl transition-all shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0px_#1D1D23] ${
-                    selectedPackage?.id === pkg.id
-                      ? 'border-[#8A2BE2] bg-purple-50'
-                      : 'border-[#1D1D23] bg-white'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-center gap-4 mb-10">
+          <div className="flex items-center gap-2">
+            <span className={`w-8 h-8 rounded-full border-3 border-[#1D1D23] flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_#1D1D23] ${
+              step === 'package' ? 'bg-[#8A2BE2] text-white' : 'bg-emerald-400 text-[#1D1D23]'
+            }`}>
+              {step === 'package' ? '1' : '✓'}
+            </span>
+            <span className="font-black text-xs md:text-sm text-[#1D1D23] uppercase tracking-wide">Pilih Paket</span>
+          </div>
+          <div className="w-8 md:w-16 h-1 bg-[#1D1D23] rounded"></div>
+          <div className="flex items-center gap-2">
+            <span className={`w-8 h-8 rounded-full border-3 border-[#1D1D23] flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_#1D1D23] ${
+              step === 'details' ? 'bg-[#8A2BE2] text-white' : 'bg-white text-gray-400'
+            }`}>
+              2
+            </span>
+            <span className={`font-black text-xs md:text-sm uppercase tracking-wide ${step === 'details' ? 'text-[#1D1D23]' : 'text-gray-400'}`}>Data Diri</span>
+          </div>
+        </div>
+
+        {step === 'package' ? (
+          <div className="flex flex-col gap-10">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-black text-[#1D1D23] mb-2 uppercase tracking-tight text-center">Pilih Paket Foto</h2>
+              <p className="text-sm text-gray-500 font-bold text-center mb-8">Silakan pilih paket terbaik untuk mengabadikan momen serumu!</p>
+              
+              <div className="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
+                {event.packages.map(pkg => (
+                  <div
+                    key={pkg.id}
+                    onClick={() => setSelectedPackage(pkg)}
+                    className={`w-full sm:w-[280px] md:w-[300px] cursor-pointer flex flex-col justify-between p-6 border-4 rounded-2xl transition-all shadow-[6px_6px_0px_#1D1D23] hover:-translate-y-1.5 hover:shadow-[10px_10px_0px_#1D1D23] active:translate-y-0 active:shadow-[4px_4px_0px_#1D1D23] ${
+                      selectedPackage?.id === pkg.id
+                        ? 'border-[#8A2BE2] bg-purple-50/50'
+                        : 'border-[#1D1D23] bg-white'
+                    }`}
+                  >
                     <div>
-                      <h3 className="font-black text-[#1D1D23] text-base">{pkg.name}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5 font-medium">{pkg.photo_count} foto • {pkg.frame_template?.name ?? 'Frame Event'}</p>
-                      {pkg.description && <p className="text-xs text-gray-400 mt-1">{pkg.description}</p>}
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="px-3 py-1 bg-purple-100 border-2 border-[#1D1D23] rounded-full text-[10px] font-black text-[#8A2BE2] uppercase">
+                          {pkg.photo_count} Slot Foto
+                        </span>
+                        {selectedPackage?.id === pkg.id && (
+                          <span className="bg-[#8A2BE2] text-white p-1 rounded-full border-2 border-[#1D1D23]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                          </span>
+                        )}
+                      </div>
+                      
+                      <h3 className="text-xl font-black text-[#1D1D23] mb-2">{pkg.name}</h3>
+                      {pkg.description ? (
+                        <p className="text-xs text-gray-600 mb-4 leading-relaxed font-semibold">
+                          {pkg.description}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 mb-4 italic font-medium">Tidak ada deskripsi paket.</p>
+                      )}
+                      
+                      <div className="space-y-2 mb-6">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>{pkg.photo_count}x Cetak Frame Foto</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="truncate">{pkg.frame_template?.name ?? 'Frame Event Eksklusif'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Unduh File Digital (QR Code)</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <span className="font-black text-[#8A2BE2] text-lg">Rp {pkg.price.toLocaleString('id-ID')}</span>
-                      {selectedPackage?.id === pkg.id && <CheckCircle2 className="w-5 h-5 text-[#8A2BE2] mt-1 ml-auto" />}
+                    
+                    <div>
+                      <div className="border-t-2 border-dashed border-[#1D1D23] pt-4 mb-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Harga Paket</p>
+                        <p className="text-2xl font-black text-[#8A2BE2]">
+                          Rp {pkg.price.toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPackage(pkg);
+                          setStep('details');
+                        }}
+                        className={`w-full py-3 rounded-xl font-black text-sm border-3 border-[#1D1D23] transition-all flex items-center justify-center gap-2 shadow-[3px_3px_0px_#1D1D23] active:shadow-none hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0px_#1D1D23] ${
+                          selectedPackage?.id === pkg.id
+                            ? 'bg-[#8A2BE2] text-white'
+                            : 'bg-white text-[#1D1D23] hover:bg-gray-50'
+                        }`}
+                      >
+                        Pilih & Lanjut <ArrowRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedPackage && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => setStep('details')}
+                  className="px-8 py-4 rounded-2xl font-black text-base md:text-lg border-4 border-[#1D1D23] bg-[#8A2BE2] text-white shadow-[6px_6px_0px_#1D1D23] hover:-translate-y-1 hover:shadow-[8px_8px_0px_#1D1D23] active:translate-y-0 active:shadow-[4px_4px_0px_#1D1D23] transition-all flex items-center gap-2"
+                >
+                  Lanjut ke Data Diri ({selectedPackage.name}) <ArrowRight className="w-5 h-5" />
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Right: Buyer Form */}
-          <div>
-            <h2 className="text-xl font-black text-[#1D1D23] mb-4 uppercase tracking-tight">2. Data Diri</h2>
-            <div className="bg-white border-3 border-[#1D1D23] rounded-2xl p-5 shadow-[4px_4px_0px_#1D1D23] flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">Nama Lengkap *</label>
-                <input
-                  type="text"
-                  value={buyerName}
-                  onChange={e => setBuyerName(e.target.value)}
-                  placeholder="Masukkan nama lengkap"
-                  className="w-full border-2 border-[#1D1D23] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-[#8A2BE2]"
-                />
               </div>
-              <div>
-                <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">Email <span className="text-gray-400 font-normal normal-case">(untuk terima link hasil foto)</span></label>
-                <input
-                  type="email"
-                  value={buyerEmail}
-                  onChange={e => setBuyerEmail(e.target.value)}
-                  placeholder="contoh@email.com"
-                  className="w-full border-2 border-[#1D1D23] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-[#8A2BE2]"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">No. WhatsApp <span className="text-gray-400 font-normal normal-case">(opsional)</span></label>
-                <input
-                  type="tel"
-                  value={buyerPhone}
-                  onChange={e => setBuyerPhone(e.target.value)}
-                  placeholder="08xxxxxxxxxx"
-                  className="w-full border-2 border-[#1D1D23] rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-[#8A2BE2]"
-                />
-              </div>
+            )}
 
-              {/* Summary */}
-              {selectedPackage && (
-                <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-3 text-sm">
-                  <div className="flex justify-between font-bold text-[#1D1D23]">
-                    <span>{selectedPackage.name}</span>
-                    <span>Rp {selectedPackage.price.toLocaleString('id-ID')}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{selectedPackage.photo_count} slot foto</p>
-                </div>
-              )}
-
-              <button
-                onClick={handlePurchase}
-                disabled={isPurchasing || !selectedPackage}
-                className="w-full py-4 rounded-xl font-black text-base border-3 border-[#1D1D23] bg-[#8A2BE2] text-white shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0px_#1D1D23] active:shadow-none transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isPurchasing ? <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</> : <><QrCode className="w-4 h-4" /> Beli & Bayar QRIS</>}
-              </button>
-              <p className="text-[10px] text-center text-gray-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-500" /> Pembayaran aman via QRIS GPN
+            {/* Redeem info */}
+            <div className="max-w-4xl mx-auto w-full mt-4 bg-amber-50 border-3 border-[#1D1D23] rounded-2xl p-6 shadow-[4px_4px_0px_#1D1D23]">
+              <h3 className="font-black text-[#1D1D23] text-lg mb-2 flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-amber-500" />
+                Sudah punya Kode Redeem?
+              </h3>
+              <p className="text-sm text-gray-600 font-medium mb-4">
+                Jika kamu sudah membeli paket sebelumnya dan mendapatkan kode redeem, kamu bisa langsung masuk ke booth melalui halaman redeem.
               </p>
+              <button
+                onClick={() => router.push('/redeem')}
+                className="w-full sm:w-auto px-6 py-3 bg-amber-400 text-[#1D1D23] border-3 border-[#1D1D23] rounded-xl font-black text-sm shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0px_#1D1D23] active:shadow-none transition-all flex items-center justify-center gap-2"
+              >
+                Masukkan Kode Redeem →
+              </button>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-4xl mx-auto">
+            {/* Back Button */}
+            <button
+              onClick={() => setStep('package')}
+              className="inline-flex items-center gap-2 font-black text-[#1D1D23] mb-6 hover:text-[#8A2BE2] transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" /> Kembali ke Pilih Paket
+            </button>
 
-        {/* Redeem info */}
-        <div className="mt-10 bg-amber-50 border-3 border-[#1D1D23] rounded-2xl p-5 shadow-[4px_4px_0px_#1D1D23]">
-          <h3 className="font-black text-[#1D1D23] mb-2 flex items-center gap-2"><QrCode className="w-5 h-5 text-amber-500" />Sudah punya Kode Redeem?</h3>
-          <p className="text-sm text-gray-600 font-medium mb-3">Jika kamu sudah membeli paket dan mendapat kode, langsung masuk ke booth melalui halaman redeem.</p>
-          <button onClick={() => router.push('/redeem')} className="neobrutal-button px-5 py-2.5 bg-amber-400 text-[#1D1D23] text-sm font-black">
-            Masukkan Kode Redeem →
-          </button>
-        </div>
+            <div className="grid md:grid-cols-5 gap-8 items-start">
+              {/* Left Side: Summary (2 cols) */}
+              <div className="md:col-span-2 space-y-4">
+                <h3 className="text-sm font-black text-[#1D1D23] uppercase tracking-wider">Paket Terpilih</h3>
+                
+                {selectedPackage && (
+                  <div className="border-4 border-[#1D1D23] rounded-2xl p-5 bg-purple-50/30 shadow-[4px_4px_0px_#1D1D23] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 bg-[#8A2BE2] text-white px-3 py-1 border-b-2 border-l-2 border-[#1D1D23] text-[10px] font-black rounded-bl-xl uppercase">
+                      Terpilih
+                    </div>
+                    <h4 className="text-xl font-black text-[#1D1D23] mb-1">{selectedPackage.name}</h4>
+                    <p className="text-xs text-gray-500 font-bold mb-4">
+                      {selectedPackage.photo_count} Slot Foto • {selectedPackage.frame_template?.name ?? 'Frame Event'}
+                    </p>
+                    
+                    <div className="space-y-2 mb-6">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Cetak & File Digital</span>
+                      </div>
+                      {selectedPackage.description && (
+                        <p className="text-xs text-gray-500 font-medium pl-5">{selectedPackage.description}</p>
+                      )}
+                    </div>
+                    
+                    <div className="border-t-2 border-[#1D1D23] pt-4 flex justify-between items-center">
+                      <span className="text-xs font-bold text-gray-400 uppercase">Total Bayar</span>
+                      <span className="text-xl font-black text-[#8A2BE2]">Rp {selectedPackage.price.toLocaleString('id-ID')}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-3 border-dashed border-gray-300 rounded-2xl p-4 bg-gray-50/50 text-xs text-gray-500 font-medium">
+                  <p className="font-bold mb-1 text-gray-600">Info Pembayaran:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Pembayaran instan menggunakan QRIS (GoPay, OVO, Dana, LinkAja, BCA, dll).</li>
+                    <li>Kode redeem akan langsung muncul setelah pembayaran sukses.</li>
+                    <li>Gunakan kode redeem tersebut untuk mulai berfoto di booth.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Right Side: Form (3 cols) */}
+              <div className="md:col-span-3">
+                <h3 className="text-sm font-black text-[#1D1D23] uppercase tracking-wider mb-4">Lengkapi Data Diri</h3>
+                <div className="bg-white border-4 border-[#1D1D23] rounded-2xl p-6 shadow-[6px_6px_0px_#1D1D23] flex flex-col gap-4">
+                  <div>
+                    <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">Nama Lengkap *</label>
+                    <input
+                      type="text"
+                      value={buyerName}
+                      onChange={e => setBuyerName(e.target.value)}
+                      placeholder="Masukkan nama lengkap"
+                      className="w-full border-2 border-[#1D1D23] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/10"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">
+                      Email <span className="text-gray-400 font-normal normal-case">(untuk kirim link hasil foto)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={buyerEmail}
+                      onChange={e => setBuyerEmail(e.target.value)}
+                      placeholder="contoh@email.com"
+                      className="w-full border-2 border-[#1D1D23] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/10"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">
+                      No. WhatsApp <span className="text-gray-400 font-normal normal-case">(opsional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={buyerPhone}
+                      onChange={e => setBuyerPhone(e.target.value)}
+                      placeholder="08xxxxxxxxxx"
+                      className="w-full border-2 border-[#1D1D23] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/10"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handlePurchase}
+                    disabled={isPurchasing || !selectedPackage}
+                    className="w-full py-4 mt-2 rounded-xl font-black text-base border-3 border-[#1D1D23] bg-[#8A2BE2] text-white shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0px_#1D1D23] active:shadow-none transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isPurchasing ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Memproses...</>
+                    ) : (
+                      <><QrCode className="w-5 h-5" /> Beli & Bayar QRIS</>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-center text-gray-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Pembayaran aman via QRIS GPN
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Payment Modal */}

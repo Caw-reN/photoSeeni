@@ -103,6 +103,10 @@ class PhotoSessionController extends Controller
             $session->load('frame');
         }
 
+        if ($request->has('gif_speed')) {
+            $session->update(['gif_speed' => (int) $request->gif_speed]);
+        }
+
         $photos = $session->photos()->orderBy('slot_index')->get();
 
         if ($photos->count() < 1) {
@@ -116,10 +120,13 @@ class PhotoSessionController extends Controller
             if ($session->final_image_path) {
                 Storage::disk('public')->delete($session->final_image_path);
             }
-            $session->update([
+            
+            $updateData = [
                 'status' => 'completed',
                 'final_image_path' => $path,
-            ]);
+            ];
+            
+            $session->update($updateData);
 
             // If this is an event session, send result notification to buyer
             $this->maybeNotifyEventResult($session);
@@ -164,7 +171,7 @@ class PhotoSessionController extends Controller
 
     public function show($sessionId)
     {
-        $session = PhotoSession::with(['frame', 'photos'])->findOrFail($sessionId);
+        $session = PhotoSession::with(['frame', 'photos', 'event'])->findOrFail($sessionId);
 
         $responseData = $session->toArray();
         if ($session->final_image_path) {

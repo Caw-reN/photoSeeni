@@ -4,6 +4,13 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { sessionsApi } from '@/lib/api';
 import { Download, Camera, Image as ImageIcon, Loader2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+
+// @ts-ignore
+let gifshot: any;
+if (typeof window !== 'undefined') {
+  gifshot = require('gifshot');
+}
 
 const BACKEND_URL = (() => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -48,8 +55,92 @@ export default function DownloadPage() {
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [slotOrientations, setSlotOrientations] = useState<Record<number, 'landscape' | 'portrait'>>({});
+
+  // GIF state
+  const [gifLoading, setGifLoading] = useState(false);
+  const [gifDataUrl, setGifDataUrl] = useState<string | null>(null);
   const frameImgRef = useRef<HTMLImageElement>(null);
   const hasRendered = useRef(false);
+
+  // ── Helper: load gambar via proxy (bypass ngrok CORS & browser warning) ──
+  const loadImageFromUrl = useCallback(async (url: string): Promise<HTMLImageElement> => {
+    // Route melalui Next.js proxy agar header ngrok-skip dikirim dari server
+    const proxied = url.startsWith('/api/proxy-image') ? url : proxyImageUrl(url);
+
+    const response = await fetch(proxied);
+    if (!response.ok) throw new Error(`HTTP ${response.status} saat load: ${url}`);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => { resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(`Gagal decode: ${url}`)); };
+      img.src = objectUrl;
+    });
+  }, []);
+
+  // ── GIF Generator ──
+  const generateGif = useCallback(async (photos: any[]) => {
+    if (!photos || photos.length === 0) return;
+    setGifLoading(true);
+    try {
+      const imageUrls: string[] = [];
+      
+      // Load all raw images and draw on a canvas to produce base64 Data URLs
+      for (const photo of photos) {
+        if (!photo?.url) continue;
+        try {
+          const img = await loadImageFromUrl(photo.url);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || 640;
+          canvas.height = img.naturalHeight || 480;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            imageUrls.push(canvas.toDataURL('image/jpeg', 0.8));
+          }
+        } catch (loadErr) {
+          console.error('Gagal memuat foto mentahan untuk GIF:', loadErr);
+        }
+      }
+
+      if (imageUrls.length > 0 && gifshot) {
+        gifshot.createGIF({
+          images: imageUrls,
+          gifWidth: 640,
+          gifHeight: 480,
+          interval: 0.15, // 0.15 seconds per frame (150ms)
+          numFrames: imageUrls.length,
+          frameDuration: 1.5, // 150ms (in 100ms units)
+        }, (obj: any) => {
+          if (!obj.error) {
+            setGifDataUrl(obj.image);
+          } else {
+            console.error('Gifshot error:', obj.error);
+            toast.error('Gagal membuat animasi GIF.');
+          }
+          setGifLoading(false);
+        });
+      } else {
+        setGifLoading(false);
+      }
+    } catch (err) {
+      console.error('GIF generation error:', err);
+      setGifLoading(false);
+    }
+  }, [loadImageFromUrl]);
+
+  const handleDownloadGif = () => {
+    if (!gifDataUrl) return;
+    const a = document.createElement('a');
+    a.href = gifDataUrl;
+    a.download = `fotoseeni-poses-${session?.id || 'session'}.gif`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success('Animasi GIF berhasil diunduh!');
+  };
 
   const fetchSession = useCallback(async () => {
     try {
@@ -93,33 +184,20 @@ export default function DownloadPage() {
           scale: 1, rotate: 0, translateX: 0, translateY: 0,
         }));
         setSlotsData(built);
+
+        // Trigger GIF generation
+        if (sorted.length > 0) {
+          generateGif(sorted);
+        }
       }
     } catch (_) {
       setError('Gagal memuat hasil sesi foto. Pastikan URL benar.');
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, generateGif]);
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
-
-  // ── Helper: load gambar via proxy (bypass ngrok CORS & browser warning) ──
-  const loadImageFromUrl = useCallback(async (url: string): Promise<HTMLImageElement> => {
-    // Route melalui Next.js proxy agar header ngrok-skip dikirim dari server
-    const proxied = url.startsWith('/api/proxy-image') ? url : proxyImageUrl(url);
-
-    const response = await fetch(proxied);
-    if (!response.ok) throw new Error(`HTTP ${response.status} saat load: ${url}`);
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => { resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(`Gagal decode: ${url}`)); };
-      img.src = objectUrl;
-    });
-  }, []);
 
   // ── Canvas render — skip if server already has final_image_url (correct with edits) ──
   const renderToCanvas = useCallback(async () => {
@@ -435,6 +513,43 @@ export default function DownloadPage() {
               )}
             </button>
           )}
+
+          {/* ── GIF Animasi Box ── */}
+          <div className="neobrutal-box bg-white p-4 border-4 border-slate-900 rounded-2xl shadow-[8px_8px_0px_#1D1D23] w-full mt-8">
+            <div className="text-center mb-3">
+              <span className="bg-[#FF7F50] text-[#1D1D23] font-black text-[10px] px-3 py-1 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] uppercase tracking-wider">
+                GIF Animasi Poses
+              </span>
+            </div>
+            
+            {gifLoading ? (
+              <div className="aspect-[4/3] w-full bg-slate-50 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
+                <Loader2 className="w-8 h-8 text-[#8A2BE2] animate-spin mb-2" />
+                <p className="text-slate-400 text-xs font-bold uppercase">Membuat Animasi GIF...</p>
+              </div>
+            ) : gifDataUrl ? (
+              <div className="aspect-[4/3] w-full bg-slate-100 border-2 border-slate-900 rounded-xl overflow-hidden relative">
+                <img
+                  src={gifDataUrl}
+                  alt="Animasi Poses"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="aspect-[4/3] w-full bg-slate-100 flex items-center justify-center border-2 border-slate-900 rounded-xl">
+                <p className="text-slate-400 font-bold text-center text-xs p-4">Tidak ada foto untuk GIF.</p>
+              </div>
+            )}
+            
+            {gifDataUrl && (
+              <button
+                onClick={handleDownloadGif}
+                className="neobrutal-button mt-4 w-full py-3 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-black text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2 uppercase cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Unduh GIF Animasi
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ══════════════════════════════════════════════

@@ -20,6 +20,7 @@ class EventPackage extends Model
         'frame_template_id',
         'is_active',
         'sort_order',
+        'session_duration',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class EventPackage extends Model
         'photo_count' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'session_duration' => 'integer',
     ];
 
     public function event(): BelongsTo
