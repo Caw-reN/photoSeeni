@@ -555,7 +555,7 @@ export default function DownloadPage() {
                 <button
                   onClick={handleDownloadStrip}
                   disabled={isRendering || !canvasDataUrl}
-                  className="neobrutal-button flex-1 py-4 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] font-extrabold text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  className="neobrutal-button flex-1 py-4 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] font-extrabold text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer disabled:opacity-60 disabled:cursor-wait !rounded-xl"
                 >
                   {isRendering ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Merender...</>
@@ -571,7 +571,7 @@ export default function DownloadPage() {
               {gifDataUrl && (
                 <button
                   onClick={handleDownloadGif}
-                  className="neobrutal-button flex-1 py-4 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-black text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer"
+                  className="neobrutal-button flex-1 py-4 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-black text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer !rounded-xl"
                 >
                   <Download className="w-4 h-4" /> Unduh GIF Poses
                   <span className="animate-pulse inline-block w-2 h-2 rounded-full bg-emerald-500 border border-white" />
@@ -582,7 +582,7 @@ export default function DownloadPage() {
             {sortedPhotos.length > 1 && (
               <button
                 onClick={handleDownloadAllRaw}
-                className="neobrutal-button w-full py-3 bg-white text-[#1D1D23] hover:bg-slate-50 border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] font-black text-xs uppercase flex items-center justify-center gap-2 cursor-pointer"
+                className="neobrutal-button w-full py-3 bg-white text-[#1D1D23] hover:bg-slate-50 border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] font-black text-xs uppercase flex items-center justify-center gap-2 cursor-pointer !rounded-xl"
               >
                 <Download className="w-4 h-4" /> Unduh Semua Foto Mentahan ({sortedPhotos.length})
               </button>
@@ -609,7 +609,7 @@ export default function DownloadPage() {
           {sortedPhotos.length > 1 && (
             <button
               onClick={handleDownloadAllRaw}
-              className="neobrutal-button px-5 py-3 bg-white text-[#1D1D23] hover:bg-slate-50 border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] font-black text-xs uppercase flex items-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5"
+              className="neobrutal-button px-5 py-3 bg-white text-[#1D1D23] hover:bg-slate-50 border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] font-black text-xs uppercase flex items-center gap-2 cursor-pointer transition-transform hover:-translate-y-0.5 !rounded-xl"
             >
               <Download className="w-4 h-4" /> Unduh Semua Poses
             </button>
@@ -644,7 +644,7 @@ export default function DownloadPage() {
 
                   <button
                     onClick={() => handleDownloadRaw(photo.id, index)}
-                    className="neobrutal-button mt-3 w-full py-2 bg-emerald-500 text-white hover:bg-emerald-600 border-2 border-slate-900 shadow-[2px_2px_0px_#1D1D23] flex items-center justify-center gap-1.5 text-[10px] font-black uppercase cursor-pointer"
+                    className="neobrutal-button mt-3 w-full py-2 bg-emerald-500 text-white hover:bg-emerald-600 border-2 border-slate-900 shadow-[2px_2px_0px_#1D1D23] flex items-center justify-center gap-1.5 text-[10px] font-black uppercase cursor-pointer !rounded-xl"
                   >
                     <Download className="w-3.5 h-3.5" /> Unduh Pose
                   </button>
