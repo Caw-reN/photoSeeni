@@ -426,4 +426,69 @@ class EventRedeemController extends Controller
 
         return response()->json($query->latest()->paginate(20));
     }
+
+    /**
+     * ADMIN: Manually generate redeem codes for an event.
+     */
+    public function adminStore(Request $request, Event $event)
+    {
+        $request->validate([
+            'event_package_id' => 'required|exists:event_packages,id',
+            'buyer_name'       => 'required|string|max:255',
+            'buyer_email'      => 'nullable|email|max:255',
+            'buyer_phone'      => 'nullable|string|max:20',
+            'quantity'         => 'required|integer|min:1|max:100',
+            'payment_status'   => 'required|in:paid,unpaid,pending',
+        ]);
+
+        $package = $event->packages()->where('id', $request->event_package_id)->firstOrFail();
+
+        $codes = [];
+        for ($i = 0; $i < $request->quantity; $i++) {
+            $codeStr = EventRedeemCode::generateCode($event);
+            $redeemCode = EventRedeemCode::create([
+                'event_id'         => $event->id,
+                'event_package_id' => $package->id,
+                'code'             => $codeStr,
+                'buyer_name'       => $request->buyer_name . ($request->quantity > 1 ? ' #' . ($i + 1) : ''),
+                'buyer_email'      => $request->buyer_email,
+                'buyer_phone'      => $request->buyer_phone,
+                'payment_status'   => $request->payment_status,
+                'payment_amount'   => $package->price,
+                'payment_paid_at'  => $request->payment_status === 'paid' ? now() : null,
+            ]);
+            $codes[] = $redeemCode;
+        }
+
+        return response()->json([
+            'message' => 'Berhasil membuat ' . count($codes) . ' kode redeem.',
+            'codes'   => $codes,
+        ], 201);
+    }
+
+    /**
+     * ADMIN: Delete a redeem code.
+     */
+    public function adminDestroy(Event $event, EventRedeemCode $redeemCode)
+    {
+        abort_if($redeemCode->event_id !== $event->id, 404);
+        $redeemCode->delete();
+        return response()->json(['message' => 'Kode redeem berhasil dihapus.']);
+    }
+
+    /**
+     * ADMIN: Mark an unpaid/pending redeem code as paid.
+     */
+    public function adminMarkPaid(Event $event, EventRedeemCode $redeemCode)
+    {
+        abort_if($redeemCode->event_id !== $event->id, 404);
+        $redeemCode->update([
+            'payment_status'  => 'paid',
+            'payment_paid_at' => now(),
+        ]);
+        return response()->json([
+            'message' => 'Kode redeem berhasil ditandai sebagai Lunas.',
+            'redeem_code' => $redeemCode
+        ]);
+    }
 }

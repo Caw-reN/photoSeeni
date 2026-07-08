@@ -122,7 +122,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::patch('/events/{event}/packages/{package}', [EventPackageController::class, 'update']);
     Route::delete('/events/{event}/packages/{package}', [EventPackageController::class, 'destroy']);
 
-    // Event redeem codes list (admin)
+    // Event redeem codes (admin)
     Route::get('/events/{event}/redeem-codes', [EventRedeemController::class, 'adminList']);
+    Route::post('/events/{event}/redeem-codes', [EventRedeemController::class, 'adminStore']);
+    Route::patch('/events/{event}/redeem-codes/{redeemCode}/mark-paid', [EventRedeemController::class, 'adminMarkPaid']);
+    Route::delete('/events/{event}/redeem-codes/{redeemCode}', [EventRedeemController::class, 'adminDestroy']);
 });
 

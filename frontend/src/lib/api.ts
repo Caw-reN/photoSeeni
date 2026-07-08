@@ -401,5 +401,28 @@ export const eventsApi = {
     if (params?.search) qs.set('search', params.search);
     return apiRequest(`/admin/events/${eventId}/redeem-codes${qs.toString() ? `?${qs}` : ''}`);
   },
+
+  adminCreateRedeemCodes: (eventId: number, data: {
+    event_package_id: number;
+    buyer_name: string;
+    buyer_email?: string;
+    buyer_phone?: string;
+    quantity: number;
+    payment_status: 'paid' | 'unpaid' | 'pending';
+  }) => apiRequest(`/admin/events/${eventId}/redeem-codes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }),
+
+  adminMarkRedeemCodePaid: (eventId: number, redeemCodeId: number) =>
+    apiRequest(`/admin/events/${eventId}/redeem-codes/${redeemCodeId}/mark-paid`, {
+      method: 'PATCH',
+    }),
+
+  adminDeleteRedeemCode: (eventId: number, redeemCodeId: number) =>
+    apiRequest(`/admin/events/${eventId}/redeem-codes/${redeemCodeId}`, {
+      method: 'DELETE',
+    }),
 };
 
