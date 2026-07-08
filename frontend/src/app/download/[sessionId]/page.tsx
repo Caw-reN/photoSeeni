@@ -334,7 +334,21 @@ export default function DownloadPage() {
   const handleDownloadAllRaw = async () => {
     if (!session?.photos || session.photos.length === 0) return;
     
-    // Tampilkan loading toast
+    // Deteksi jika user mengakses via perangkat mobile/HP (Android/iOS)
+    const isMobile = typeof window !== 'undefined' && 
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+    if (isMobile) {
+      toast.info('Mengunduh semua pose satu per satu ke galeri HP... Izinkan unduhan ganda jika ditanyakan browser.');
+      session.photos.forEach((photo: any, index: number) => {
+        setTimeout(() => {
+          handleDownloadRaw(photo.id, index);
+        }, index * 1200);
+      });
+      return;
+    }
+    
+    // Tampilkan loading toast (untuk Desktop)
     const toastId = toast.loading('Sedang menyiapkan berkas ZIP semua pose...');
     try {
       const JSZip = (await import('jszip')).default;
