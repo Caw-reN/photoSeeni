@@ -331,11 +331,48 @@ export default function DownloadPage() {
     document.body.removeChild(a);
   };
 
-  const handleDownloadAllRaw = () => {
-    if (!session?.photos) return;
-    session.photos.forEach((photo: any, index: number) => {
-      setTimeout(() => handleDownloadRaw(photo.id, index), index * 300);
-    });
+  const handleDownloadAllRaw = async () => {
+    if (!session?.photos || session.photos.length === 0) return;
+    
+    // Tampilkan loading toast
+    const toastId = toast.loading('Sedang menyiapkan berkas ZIP semua pose...');
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
+      for (let i = 0; i < session.photos.length; i++) {
+        const photo = session.photos[i];
+        // Fetch gambar menggunakan proxy helper untuk menghindari CORS issue
+        const response = await fetch(proxyImageUrl(photo.url));
+        if (!response.ok) throw new Error(`HTTP error status ${response.status}`);
+        const blob = await response.blob();
+        
+        // Masukkan file blob ke ZIP
+        zip.file(`pose-${i + 1}.jpg`, blob);
+      }
+      
+      // Generate blob ZIP
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Unduh file ZIP
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = `fotoseeni-poses-${session.id}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      
+      toast.success('Berhasil mengunduh semua pose dalam satu file ZIP!', { id: toastId });
+    } catch (err) {
+      console.error('Gagal membuat ZIP:', err);
+      toast.error('Gagal membuat ZIP. Mengunduh pose satu per satu...', { id: toastId });
+      
+      // Fallback: unduh satu per satu dengan jeda waktu 1 detik
+      session.photos.forEach((photo: any, index: number) => {
+        setTimeout(() => handleDownloadRaw(photo.id, index), index * 1000);
+      });
+    }
   };
 
   // ── Guards ────────────────────────────────────────────────────────────────
