@@ -612,7 +612,7 @@ export default function DownloadPage() {
                     onClick={() => handleDownloadRaw(photo.id, index)}
                     className="neobrutal-button mt-3 w-full py-2 bg-emerald-500 text-white hover:bg-emerald-600 border-2 border-slate-900 shadow-[2px_2px_0px_#1D1D23] flex items-center justify-center gap-1.5 text-[10px] font-black uppercase cursor-pointer !rounded-xl"
                   >
-                    <Download className="w-3.5 h-3.5" /> Unduh Pose
+                    <Download className="w-3.5 h-3.5" /> Unduh
                   </button>
                 </div>
               );
