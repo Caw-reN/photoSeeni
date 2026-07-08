@@ -599,21 +599,13 @@ export default function DownloadPage() {
                   key={photo.id || index}
                   className={`bg-white p-3 pb-5 border-4 border-slate-900 shadow-[4px_4px_0px_#1D1D23] rounded-xl flex flex-col justify-between transition-all duration-300 ${rotationClass} hover:-translate-y-2 hover:shadow-[6px_6px_0px_#1D1D23] cursor-pointer`}
                 >
-                  <div>
-                    {/* Polaroid Photo Frame */}
-                    <div className="aspect-[4/3] bg-slate-100 border-2 border-slate-900 rounded-lg overflow-hidden relative shadow-inner">
-                      <img
-                        src={proxyImageUrl(photo.url)}
-                        alt={`Raw Photo ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    {/* Handwriting style label */}
-                    <div className="text-center mt-3 mb-1">
-                      <span className="font-mono text-xs font-black text-slate-800 tracking-wider uppercase bg-slate-100 px-3 py-1 rounded border border-slate-300">
-                        Pose #{index + 1}
-                      </span>
-                    </div>
+                  {/* Polaroid Photo Frame */}
+                  <div className="aspect-[4/3] bg-slate-100 border-2 border-slate-900 rounded-lg overflow-hidden relative shadow-inner">
+                    <img
+                      src={proxyImageUrl(photo.url)}
+                      alt={`Raw Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   <button
