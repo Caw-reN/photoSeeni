@@ -505,7 +505,7 @@ export default function DownloadPage() {
                 {isRendering ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Merender...</>
                 ) : canvasDataUrl ? (
-                  <><Download className="w-4 h-4" /> Unduh Strip HD</>
+                  <><Download className="w-4 h-4" /> Unduh</>
                 ) : (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyiapkan...</>
                 )}
@@ -558,7 +558,7 @@ export default function DownloadPage() {
                 onClick={handleDownloadGif}
                 className="neobrutal-button mt-4 w-full py-3.5 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-black text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer !rounded-xl"
               >
-                <Download className="w-4 h-4" /> Unduh GIF Poses
+                <Download className="w-4 h-4" /> Unduh
                 <span className="animate-pulse inline-block w-2 h-2 rounded-full bg-emerald-500 border border-white" />
               </button>
             )}
