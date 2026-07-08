@@ -498,16 +498,33 @@ export default function DownloadPage() {
                 </div>
               )}
             </div>
+
+            {/* Download strip button */}
+            {(isRendering || canShowLayered || session.final_image_url) && (
+              <button
+                onClick={handleDownloadStrip}
+                disabled={isRendering || !canvasDataUrl}
+                className="neobrutal-button mt-5 w-full py-4 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] font-extrabold text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer disabled:opacity-60 disabled:cursor-wait !rounded-xl"
+              >
+                {isRendering ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Merender...</>
+                ) : canvasDataUrl ? (
+                  <><Download className="w-4 h-4" /> Unduh Strip HD</>
+                ) : (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Menyiapkan...</>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
         {/* ══════════════════════════════════════════════
-            KOLOM KANAN — GIF Animasi & Panel Kontrol
+            KOLOM KANAN — GIF Animasi Poses
             ══════════════════════════════════════════════ */}
         <div className="w-full lg:w-[360px] flex-shrink-0 flex flex-col gap-6">
           
           {/* ── GIF Animasi Box (Vintage Monitor Style) ── */}
-          <div className="neobrutal-box bg-white p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full flex flex-col">
+          <div className="neobrutal-box bg-white p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full flex flex-col justify-between">
             <div>
               <div className="text-center mb-4">
                 <span className="bg-[#FF7F50] text-[#1D1D23] font-black text-[10px] px-3.5 py-1.5 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] uppercase tracking-wider">
@@ -533,62 +550,23 @@ export default function DownloadPage() {
                   <p className="text-slate-400 font-bold text-center text-xs p-4">Tidak ada foto untuk GIF.</p>
                 </div>
               )}
+
+              <p className="text-gray-400 text-[10px] font-bold text-center uppercase tracking-widest mt-3">
+                *Berisi kumpulan semua pose foto dalam 1 animasi
+              </p>
             </div>
             
-            <p className="text-gray-400 text-[10px] font-bold text-center uppercase tracking-widest mt-3">
-              *Berisi kumpulan semua pose foto dalam 1 animasi
-            </p>
-          </div>
-
-          {/* ── Pusat Unduhan & Aksi ── */}
-          <div className="neobrutal-box bg-violet-50 p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full flex flex-col gap-4">
-            <div className="flex items-center gap-2 border-b-2 border-dashed border-slate-300 pb-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#8A2BE2]" />
-              <h3 className="font-black text-slate-900 text-xs uppercase tracking-wider">
-                Control Panel / Pusat Unduhan
-              </h3>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Unduh Strip HD */}
-              {(isRendering || canShowLayered || session.final_image_url) && (
-                <button
-                  onClick={handleDownloadStrip}
-                  disabled={isRendering || !canvasDataUrl}
-                  className="neobrutal-button flex-1 py-4 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] font-extrabold text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer disabled:opacity-60 disabled:cursor-wait !rounded-xl"
-                >
-                  {isRendering ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Merender...</>
-                  ) : canvasDataUrl ? (
-                    <><Download className="w-4 h-4" /> Unduh Strip HD</>
-                  ) : (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Menyiapkan...</>
-                  )}
-                </button>
-              )}
-
-              {/* Unduh GIF Animasi */}
-              {gifDataUrl && (
-                <button
-                  onClick={handleDownloadGif}
-                  className="neobrutal-button flex-1 py-4 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-black text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer !rounded-xl"
-                >
-                  <Download className="w-4 h-4" /> Unduh GIF Poses
-                  <span className="animate-pulse inline-block w-2 h-2 rounded-full bg-emerald-500 border border-white" />
-                </button>
-              )}
-            </div>
-
-            {sortedPhotos.length > 1 && (
+            {/* Unduh GIF Animasi */}
+            {gifDataUrl && (
               <button
-                onClick={handleDownloadAllRaw}
-                className="neobrutal-button w-full py-3 bg-white text-[#1D1D23] hover:bg-slate-50 border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] font-black text-xs uppercase flex items-center justify-center gap-2 cursor-pointer !rounded-xl"
+                onClick={handleDownloadGif}
+                className="neobrutal-button mt-4 w-full py-3.5 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-black text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer !rounded-xl"
               >
-                <Download className="w-4 h-4" /> Unduh Semua Foto Mentahan ({sortedPhotos.length})
+                <Download className="w-4 h-4" /> Unduh GIF Poses
+                <span className="animate-pulse inline-block w-2 h-2 rounded-full bg-emerald-500 border border-white" />
               </button>
             )}
           </div>
-
         </div>
       </div>
 
