@@ -53,6 +53,14 @@ class EventController extends Controller
     }
 
     /**
+     * Show single event details (admin only).
+     */
+    public function adminShow(Event $event)
+    {
+        return response()->json($event->load(['creator', 'frameTemplate', 'packages']));
+    }
+
+    /**
      * Create a new event (admin only).
      */
     public function store(Request $request)

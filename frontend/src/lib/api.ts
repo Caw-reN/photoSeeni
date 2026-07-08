@@ -348,6 +348,7 @@ export const eventsApi = {
     method: 'DELETE',
   }),
 
+  adminGetEvent: (eventId: number) => apiRequest(`/admin/events/${eventId}`),
   adminGetEventStats: (eventId: number) => apiRequest(`/admin/events/${eventId}/stats`),
 
   // Admin packages
