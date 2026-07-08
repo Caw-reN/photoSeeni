@@ -360,6 +360,8 @@ export const eventsApi = {
     frame_template_id?: number | null;
     is_active?: boolean;
     sort_order?: number;
+    session_duration?: number;
+    allow_print?: boolean;
   }) => apiRequest(`/admin/events/${eventId}/packages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -374,6 +376,8 @@ export const eventsApi = {
     frame_template_id: number | null;
     is_active: boolean;
     sort_order: number;
+    session_duration: number;
+    allow_print: boolean;
   }>) => apiRequest(`/admin/events/${eventId}/packages/${packageId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -37,6 +37,8 @@ class EventPackageController extends Controller
             'frame_template_id' => 'nullable|exists:frame_templates,id',
             'is_active'         => 'boolean',
             'sort_order'        => 'integer',
+            'session_duration'  => 'integer|min:10',
+            'allow_print'       => 'boolean',
         ]);
 
         $package = $event->packages()->create($validated);
@@ -59,6 +61,8 @@ class EventPackageController extends Controller
             'frame_template_id' => 'nullable|exists:frame_templates,id',
             'is_active'         => 'sometimes|boolean',
             'sort_order'        => 'sometimes|integer',
+            'session_duration'  => 'sometimes|integer|min:10',
+            'allow_print'       => 'sometimes|boolean',
         ]);
 
         $package->update($validated);
