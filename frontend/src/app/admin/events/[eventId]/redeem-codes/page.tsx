@@ -52,7 +52,7 @@ export default function ManageRedeemCodesPage() {
   const [showGenForm, setShowGenForm] = useState(false);
   const [genForm, setGenForm] = useState({
     event_package_id: '',
-    buyer_name: 'Manual Order',
+    buyer_name: '',
     buyer_email: '',
     buyer_phone: '',
     quantity: 1,
@@ -132,15 +132,15 @@ export default function ManageRedeemCodesPage() {
 
   const handleGenerateCodes = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!genForm.event_package_id || !genForm.buyer_name) {
-      return toast.error('Pilih paket dan masukkan nama pembeli.');
+    if (!genForm.event_package_id) {
+      return toast.error('Pilih paket terlebih dahulu.');
     }
 
     setIsGenerating(true);
     try {
       const payload = {
         event_package_id: Number(genForm.event_package_id),
-        buyer_name: genForm.buyer_name,
+        buyer_name: genForm.buyer_name || undefined,
         buyer_email: genForm.buyer_email || undefined,
         buyer_phone: genForm.buyer_phone || undefined,
         quantity: Number(genForm.quantity),
@@ -216,14 +216,13 @@ export default function ManageRedeemCodesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-black uppercase text-[#1D1D23] mb-1 block">Nama Pembeli *</label>
+                  <label className="text-xs font-black uppercase text-[#1D1D23] mb-1 block">Nama Pembeli (Opsional)</label>
                   <input 
                     type="text" 
                     value={genForm.buyer_name} 
                     onChange={e => setGenForm(p => ({ ...p, buyer_name: e.target.value }))} 
                     placeholder="Contoh: Budi Santoso / Free Voucher" 
                     className="w-full border-2 border-[#1D1D23] rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:border-[#8A2BE2]" 
-                    required
                   />
                 </div>
 

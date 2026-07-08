@@ -258,7 +258,7 @@ class EventRedeemController extends Controller
         return response()->json([
             'status'      => 'valid',
             'message'     => 'Kode valid! Sesi foto siap dimulai.',
-            'redeem_code' => $redeemCode->only(['id', 'code', 'buyer_name']),
+            'redeem_code' => $redeemCode->only(['id', 'code', 'buyer_name', 'buyer_email', 'buyer_phone']),
             'event'       => array_merge(
                 $redeemCode->event->only(['id', 'name', 'slug', 'organizer_name']),
                 ['frame' => $redeemCode->event->frameTemplate]
@@ -276,7 +276,12 @@ class EventRedeemController extends Controller
      */
     public function startSession(Request $request)
     {
-        $request->validate(['code' => 'required|string']);
+        $request->validate([
+            'code'        => 'required|string',
+            'buyer_name'  => 'nullable|string|max:255',
+            'buyer_email' => 'nullable|email|max:255',
+            'buyer_phone' => 'nullable|string|max:20',
+        ]);
 
         $redeemCode = EventRedeemCode::with(['event', 'package'])
             ->where('code', strtoupper(trim($request->code)))
@@ -311,11 +316,19 @@ class EventRedeemController extends Controller
             'payment_status'        => 'paid', // Already paid via event purchase
         ]);
 
+        // Update buyer details if provided, fallback to current or default
+        $buyerName  = $request->buyer_name ?: $redeemCode->buyer_name;
+        $buyerEmail = $request->filled('buyer_email') ? $request->buyer_email : $redeemCode->buyer_email;
+        $buyerPhone = $request->filled('buyer_phone') ? $request->buyer_phone : $redeemCode->buyer_phone;
+
         // Mark redeem code as used
         $redeemCode->update([
             'is_used'          => true,
             'used_at'          => now(),
             'photo_session_id' => $session->id,
+            'buyer_name'       => $buyerName ?: 'Peserta',
+            'buyer_email'      => $buyerEmail,
+            'buyer_phone'      => $buyerPhone,
         ]);
 
         return response()->json([
@@ -434,7 +447,7 @@ class EventRedeemController extends Controller
     {
         $request->validate([
             'event_package_id' => 'required|exists:event_packages,id',
-            'buyer_name'       => 'required|string|max:255',
+            'buyer_name'       => 'nullable|string|max:255',
             'buyer_email'      => 'nullable|email|max:255',
             'buyer_phone'      => 'nullable|string|max:20',
             'quantity'         => 'required|integer|min:1|max:100',
@@ -446,11 +459,12 @@ class EventRedeemController extends Controller
         $codes = [];
         for ($i = 0; $i < $request->quantity; $i++) {
             $codeStr = EventRedeemCode::generateCode($event);
+            $baseName = $request->buyer_name ?: 'Peserta';
             $redeemCode = EventRedeemCode::create([
                 'event_id'         => $event->id,
                 'event_package_id' => $package->id,
                 'code'             => $codeStr,
-                'buyer_name'       => $request->buyer_name . ($request->quantity > 1 ? ' #' . ($i + 1) : ''),
+                'buyer_name'       => $baseName . ($request->quantity > 1 ? ' #' . ($i + 1) : ''),
                 'buyer_email'      => $request->buyer_email,
                 'buyer_phone'      => $request->buyer_phone,
                 'payment_status'   => $request->payment_status,

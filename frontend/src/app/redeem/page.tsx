@@ -10,7 +10,7 @@ type ValidateResult = {
   status: 'valid' | 'already_used' | 'invalid' | 'unpaid' | 'expired';
   message: string;
   result_url?: string;
-  redeem_code?: { code: string; buyer_name: string };
+  redeem_code?: { code: string; buyer_name: string; buyer_email?: string; buyer_phone?: string };
   event?: { name: string; slug: string; organizer_name: string };
   package?: { name: string; photo_count: number };
 };
@@ -22,6 +22,13 @@ export default function RedeemPage() {
   const [result, setResult] = useState<ValidateResult | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
+  // User input details state (for sending photos)
+  const [userDetails, setUserDetails] = useState({
+    buyer_name: '',
+    buyer_email: '',
+    buyer_phone: '',
+  });
+
   const handleValidate = async () => {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return toast.error('Masukkan kode redeem terlebih dahulu.');
@@ -31,8 +38,14 @@ export default function RedeemPage() {
     try {
       const res = await eventsApi.validateCode(trimmed);
       setResult(res);
+      if (res.status === 'valid' && res.redeem_code) {
+        setUserDetails({
+          buyer_name: res.redeem_code.buyer_name === 'Peserta' ? '' : (res.redeem_code.buyer_name || ''),
+          buyer_email: res.redeem_code.buyer_email || '',
+          buyer_phone: res.redeem_code.buyer_phone || '',
+        });
+      }
     } catch (err: any) {
-      // 404 / 402 / 410 — parse error into result
       const status = err.message?.includes('tidak ditemukan') ? 'invalid'
         : err.message?.includes('dibayar') ? 'unpaid'
         : err.message?.includes('berakhir') ? 'expired'
@@ -45,9 +58,26 @@ export default function RedeemPage() {
 
   const handleStartSession = async () => {
     const trimmed = code.trim().toUpperCase();
+    
+    // Client-side validation of user input details
+    const name = userDetails.buyer_name.trim();
+    const email = userDetails.buyer_email.trim();
+    const phone = userDetails.buyer_phone.trim();
+
+    if (!name) {
+      return toast.error('Nama Lengkap wajib diisi.');
+    }
+    if (!email && !phone) {
+      return toast.error('Mohon isi setidaknya email atau nomor WhatsApp untuk mengirimkan hasil foto.');
+    }
+
     setIsStarting(true);
     try {
-      const res = await eventsApi.startSession(trimmed);
+      const res = await eventsApi.startSession(trimmed, {
+        buyer_name: name,
+        buyer_email: email || undefined,
+        buyer_phone: phone || undefined
+      });
       // Store session info for booth
       if (typeof window !== 'undefined') {
         localStorage.setItem('active_session_id', String(res.session.id));
@@ -137,14 +167,56 @@ export default function RedeemPage() {
                     <div className="bg-white border-2 border-[#1D1D23] rounded-xl p-3">
                       <p className="text-xs font-black text-[#1D1D23] uppercase">{result.event.name}</p>
                       <p className="text-xs text-gray-500 font-medium">{result.event.organizer_name}</p>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 border-b-2 border-dashed border-slate-100 pb-2 mb-2">
                         <Package className="w-4 h-4 text-[#8A2BE2]" />
                         <span className="text-xs font-bold text-[#1D1D23]">{result.package.name} — {result.package.photo_count} foto</span>
                       </div>
-                      {result.redeem_code && (
-                        <p className="text-xs text-gray-400 mt-1">Halo, <strong>{result.redeem_code.buyer_name}</strong>! Kode kamu valid 🎉</p>
-                      )}
+
+                      {/* Participant Form Details */}
+                      <div className="flex flex-col gap-2.5 mt-2">
+                        <p className="text-[10px] font-black uppercase text-gray-400">Informasi Penerima Hasil Foto</p>
+                        
+                        <div>
+                          <label className="text-[9px] font-black uppercase text-[#1D1D23] mb-1 block">Nama Lengkap *</label>
+                          <input
+                            type="text"
+                            value={userDetails.buyer_name}
+                            onChange={e => setUserDetails(p => ({ ...p, buyer_name: e.target.value }))}
+                            placeholder="Nama panggilan / lengkap Anda"
+                            className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-[#8A2BE2]"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-[#1D1D23] mb-1 block">WhatsApp (No. WA) *</label>
+                            <input
+                              type="text"
+                              value={userDetails.buyer_phone}
+                              onChange={e => setUserDetails(p => ({ ...p, buyer_phone: e.target.value }))}
+                              placeholder="08123456789"
+                              className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-[#8A2BE2]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-[#1D1D23] mb-1 block">Alamat Email *</label>
+                            <input
+                              type="email"
+                              value={userDetails.buyer_email}
+                              onChange={e => setUserDetails(p => ({ ...p, buyer_email: e.target.value }))}
+                              placeholder="nama@email.com"
+                              className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-[#8A2BE2]"
+                            />
+                          </div>
+                        </div>
+
+                        <p className="text-[8.5px] text-gray-400 font-bold leading-tight mt-1">
+                          * Tautan hasil foto akan dikirim otomatis. Wajib mengisi Nama & minimal salah satu kontak (WhatsApp / Email).
+                        </p>
+                      </div>
                     </div>
+                    
                     <button
                       onClick={handleStartSession}
                       disabled={isStarting}

@@ -296,10 +296,10 @@ export const eventsApi = {
   }),
 
   // Public: start a photoshoot session with a valid code
-  startSession: (code: string) => apiRequest('/events/redeem/start-session', {
+  startSession: (code: string, data?: { buyer_name?: string; buyer_email?: string; buyer_phone?: string }) => apiRequest('/events/redeem/start-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, ...data }),
   }),
 
   // Public: get photo result by redeem code
@@ -404,7 +404,7 @@ export const eventsApi = {
 
   adminCreateRedeemCodes: (eventId: number, data: {
     event_package_id: number;
-    buyer_name: string;
+    buyer_name?: string;
     buyer_email?: string;
     buyer_phone?: string;
     quantity: number;
