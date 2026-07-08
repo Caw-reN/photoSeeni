@@ -59,6 +59,10 @@ export default function AdminEventsPage() {
   }, []);
 
   const openEventDetail = async (event: Event) => {
+    if (selectedEvent?.id === event.id) {
+      setSelectedEvent(null);
+      return;
+    }
     setSelectedEvent(event);
     setIsLoadingDetail(true);
     try {
@@ -175,7 +179,7 @@ export default function AdminEventsPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFDF7] p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -187,117 +191,138 @@ export default function AdminEventsPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
-          {/* Event List */}
-          <div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari event..." className="w-full pl-9 pr-4 py-2.5 border-3 border-[#1D1D23] rounded-xl text-sm font-medium focus:outline-none focus:border-[#8A2BE2]" />
-            </div>
-
-            {isLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[#8A2BE2]" /></div>
-            ) : events.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 font-bold">Belum ada event. Buat event pertama kamu!</div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {events.map(event => (
-                  <div key={event.id} className={`bg-white border-3 rounded-2xl p-4 shadow-[3px_3px_0px_#1D1D23] cursor-pointer transition-all hover:shadow-[4px_4px_0px_#8A2BE2] ${selectedEvent?.id === event.id ? 'border-[#8A2BE2]' : 'border-[#1D1D23]'}`} onClick={() => openEventDetail(event)}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${event.is_active ? 'bg-emerald-100 border-emerald-400 text-emerald-700' : 'bg-gray-100 border-gray-300 text-gray-500'}`}>
-                            {event.is_active ? 'AKTIF' : 'NONAKTIF'}
-                          </span>
-                          {event.event_date && <span className="text-[10px] text-gray-400 font-medium">{new Date(event.event_date).toLocaleDateString('id-ID')}</span>}
-                        </div>
-                        <h3 className="font-black text-[#1D1D23] text-base leading-tight truncate">{event.name}</h3>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">{event.organizer_name}{event.location ? ` • ${event.location}` : ''}</p>
-                        <div className="flex gap-3 mt-2 text-xs text-gray-500 font-bold">
-                          <span className="flex items-center gap-1"><Package className="w-3 h-3" />{event.packages_count} paket</span>
-                          <span className="flex items-center gap-1"><QrCode className="w-3 h-3" />{event.redeem_codes_count} kode</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={e => { e.stopPropagation(); openEditEvent(event); }} className="p-1.5 border-2 border-[#1D1D23] rounded-lg bg-white hover:bg-slate-50"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={e => { e.stopPropagation(); handleToggleActive(event); }} className="p-1.5 border-2 border-[#1D1D23] rounded-lg bg-white hover:bg-slate-50">
-                          {event.is_active ? <ToggleRight className="w-3.5 h-3.5 text-emerald-600" /> : <ToggleLeft className="w-3.5 h-3.5 text-gray-400" />}
-                        </button>
-                        <button onClick={e => { e.stopPropagation(); handleDeleteEvent(event.id); }} className="p-1.5 border-2 border-red-200 rounded-lg bg-white hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
-                        <ChevronRight className="w-4 h-4 text-gray-300" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div>
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari event..." className="w-full pl-9 pr-4 py-2.5 border-3 border-[#1D1D23] rounded-xl text-sm font-medium focus:outline-none focus:border-[#8A2BE2]" />
           </div>
 
-          {/* Event Detail Panel */}
-          {selectedEvent && (
-            <div className="bg-white border-3 border-[#1D1D23] rounded-2xl shadow-[5px_5px_0px_#1D1D23] p-5 h-fit sticky top-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="font-black text-[#1D1D23] text-lg leading-tight">{selectedEvent.name}</h2>
-                  <p className="text-xs text-gray-500 font-medium mt-0.5">{selectedEvent.organizer_name}</p>
-                </div>
-                <a href={`/event/${selectedEvent.slug}`} target="_blank" className="p-2 border-2 border-[#1D1D23] rounded-lg hover:bg-slate-50" title="Buka halaman publik">
-                  <Eye className="w-4 h-4" />
-                </a>
-              </div>
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[#8A2BE2]" /></div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 font-bold">Belum ada event. Buat event pertama kamu!</div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {events.map(event => (
+                <div 
+                  key={event.id} 
+                  className={`bg-white border-3 rounded-2xl p-4 shadow-[3px_3px_0px_#1D1D23] cursor-pointer transition-all duration-300 ${selectedEvent?.id === event.id ? 'border-[#8A2BE2] shadow-[5px_5px_0px_#8A2BE2] scale-[1.01]' : 'border-[#1D1D23] hover:shadow-[4px_4px_0px_#8A2BE2]'}`} 
+                  onClick={() => openEventDetail(event)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${event.is_active ? 'bg-emerald-100 border-emerald-400 text-emerald-700' : 'bg-gray-100 border-gray-300 text-gray-500'}`}>
+                          {event.is_active ? 'AKTIF' : 'NONAKTIF'}
+                        </span>
+                        {event.event_date && <span className="text-[10px] text-gray-400 font-medium">{new Date(event.event_date).toLocaleDateString('id-ID')}</span>}
+                      </div>
+                      <h3 className="font-black text-[#1D1D23] text-base leading-tight truncate">{event.name}</h3>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">{event.organizer_name}{event.location ? ` • ${event.location}` : ''}</p>
+                      <div className="flex gap-3 mt-2 text-xs text-gray-500 font-bold">
+                        <span className="flex items-center gap-1"><Package className="w-3 h-3" />{event.packages_count} paket</span>
+                        <span className="flex items-center gap-1"><QrCode className="w-3 h-3" />{event.redeem_codes_count} kode</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={e => { e.stopPropagation(); openEditEvent(event); }} className="p-1.5 border-2 border-[#1D1D23] rounded-lg bg-white hover:bg-slate-50"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={e => { e.stopPropagation(); handleToggleActive(event); }} className="p-1.5 border-2 border-[#1D1D23] rounded-lg bg-white hover:bg-slate-50">
+                        {event.is_active ? <ToggleRight className="w-3.5 h-3.5 text-emerald-600" /> : <ToggleLeft className="w-3.5 h-3.5 text-gray-400" />}
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); handleDeleteEvent(event.id); }} className="p-1.5 border-2 border-red-200 rounded-lg bg-white hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                      <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${selectedEvent?.id === event.id ? 'rotate-90 text-[#8A2BE2]' : ''}`} />
+                    </div>
+                  </div>
 
-              {isLoadingDetail ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#8A2BE2]" /></div>
-              ) : (
-                <>
-                  {/* Stats */}
-                  {eventStats && (
-                    <div className="grid grid-cols-2 gap-2 mb-5">
-                      {[
-                        { label: 'Total Kode', value: eventStats.total_codes },
-                        { label: 'Sudah Dibayar', value: eventStats.paid_codes, color: 'text-emerald-600' },
-                        { label: 'Sudah Foto', value: eventStats.used_codes, color: 'text-blue-600' },
-                        { label: 'Revenue', value: `Rp ${eventStats.revenue.toLocaleString('id-ID')}`, color: 'text-[#8A2BE2]' },
-                      ].map(s => (
-                        <div key={s.label} className="bg-gray-50 border-2 border-gray-200 rounded-xl p-3">
-                          <p className="text-[10px] font-black uppercase text-gray-400">{s.label}</p>
-                          <p className={`font-black text-lg ${s.color || 'text-[#1D1D23]'}`}>{s.value}</p>
+                  {/* EXPANDED DROPDOWN PANEL */}
+                  {selectedEvent?.id === event.id && (
+                    <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-200 cursor-default" onClick={e => e.stopPropagation()}>
+                      {isLoadingDetail ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#8A2BE2]" />
                         </div>
-                      ))}
+                      ) : (
+                        <>
+                          {/* Event description */}
+                          {event.description && (
+                            <div className="mb-4 bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-xs text-slate-600 font-bold">
+                              <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Deskripsi Event</p>
+                              <p className="leading-relaxed">{event.description}</p>
+                            </div>
+                          )}
+
+                          {/* Stats */}
+                          {eventStats && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                              {[
+                                { label: 'Total Kode', value: eventStats.total_codes },
+                                { label: 'Sudah Dibayar', value: eventStats.paid_codes, color: 'text-emerald-600' },
+                                { label: 'Sudah Foto', value: eventStats.used_codes, color: 'text-blue-600' },
+                                { label: 'Revenue', value: `Rp ${eventStats.revenue.toLocaleString('id-ID')}`, color: 'text-[#8A2BE2]' },
+                              ].map(s => (
+                                <div key={s.label} className="bg-gray-50 border-2 border-gray-200 rounded-xl p-3">
+                                  <p className="text-[10px] font-black uppercase text-gray-400">{s.label}</p>
+                                  <p className={`font-black text-sm sm:text-base md:text-lg ${s.color || 'text-[#1D1D23]'}`}>{s.value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Packages Section */}
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-black text-[#1D1D23] text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <Package className="w-3.5 h-3.5 text-gray-400" /> Daftar Paket Event
+                            </h4>
+                            <button 
+                              onClick={openCreatePackage} 
+                              className="flex items-center gap-1 text-[10px] font-black text-[#8A2BE2] border-2 border-[#8A2BE2] rounded-lg px-2.5 py-1 hover:bg-purple-50 transition-colors"
+                            >
+                              <Plus className="w-3 h-3" /> Tambah Paket
+                            </button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                            {eventPackages.length === 0 && (
+                              <p className="text-xs text-gray-400 font-medium py-4 text-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl sm:col-span-2">
+                                Belum ada paket. Tambah paket untuk event ini.
+                              </p>
+                            )}
+                            {eventPackages.map(pkg => (
+                              <div key={pkg.id} className="flex items-center justify-between border-2 border-gray-200 rounded-xl p-3 bg-white hover:border-slate-300 transition-all shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+                                <div>
+                                  <p className="font-black text-[#1D1D23] text-sm">{pkg.name}</p>
+                                  <p className="text-xs text-gray-500 font-medium">{pkg.photo_count} foto • Rp {pkg.price.toLocaleString('id-ID')}</p>
+                                </div>
+                                <div className="flex gap-1">
+                                  <button onClick={() => openEditPackage(pkg)} className="p-1.5 border-2 border-[#1D1D23] rounded-lg bg-white hover:bg-slate-50"><Pencil className="w-3 h-3" /></button>
+                                  <button onClick={() => handleDeletePackage(pkg)} className="p-1.5 border-2 border-red-200 rounded-lg bg-white hover:bg-red-50"><Trash2 className="w-3 h-3 text-red-500" /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Bottom Action Buttons */}
+                          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t-2 border-dashed border-gray-100">
+                            <a 
+                              href={`/admin/events/${selectedEvent.id}/redeem-codes`} 
+                              className="flex-1 flex items-center justify-center gap-2 py-3 border-3 border-[#1D1D23] rounded-xl font-black text-sm bg-[#1D1D23] text-white hover:opacity-90 transition-opacity shadow-[3px_3px_0px_rgba(0,0,0,0.15)]"
+                            >
+                              <QrCode className="w-4 h-4" /> Kelola Kode Redeem
+                            </a>
+                            <a 
+                              href={`/event/${selectedEvent.slug}`} 
+                              target="_blank" 
+                              className="flex-1 flex items-center justify-center gap-2 py-3 border-3 border-[#1D1D23] rounded-xl font-black text-sm bg-white text-[#1D1D23] hover:bg-slate-50 transition-colors shadow-[3px_3px_0px_rgba(0,0,0,0.15)]"
+                            >
+                              <Eye className="w-4 h-4" strokeWidth={2.5} /> Buka Halaman Publik Event
+                            </a>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
-
-                  {/* Packages */}
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-black text-[#1D1D23] text-sm uppercase tracking-wide">Paket</h3>
-                    <button onClick={openCreatePackage} className="flex items-center gap-1 text-xs font-black text-[#8A2BE2] border-2 border-[#8A2BE2] rounded-lg px-2 py-1 hover:bg-purple-50">
-                      <Plus className="w-3 h-3" /> Tambah
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-2 mb-4">
-                    {eventPackages.length === 0 && <p className="text-xs text-gray-400 font-medium text-center py-3">Belum ada paket. Tambah paket untuk event ini.</p>}
-                    {eventPackages.map(pkg => (
-                      <div key={pkg.id} className="flex items-center justify-between border-2 border-gray-200 rounded-xl p-3">
-                        <div>
-                          <p className="font-black text-[#1D1D23] text-sm">{pkg.name}</p>
-                          <p className="text-xs text-gray-500 font-medium">{pkg.photo_count} foto • Rp {pkg.price.toLocaleString('id-ID')}</p>
-                        </div>
-                        <div className="flex gap-1">
-                          <button onClick={() => openEditPackage(pkg)} className="p-1.5 border-2 border-[#1D1D23] rounded-lg hover:bg-slate-50"><Pencil className="w-3 h-3" /></button>
-                          <button onClick={() => handleDeletePackage(pkg)} className="p-1.5 border-2 border-red-200 rounded-lg hover:bg-red-50"><Trash2 className="w-3 h-3 text-red-500" /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2 pt-3 border-t-2 border-gray-100">
-                    <a href={`/admin/events/${selectedEvent.id}/redeem-codes`} className="flex items-center justify-center gap-2 w-full py-2.5 border-3 border-[#1D1D23] rounded-xl font-black text-sm bg-[#1D1D23] text-white hover:opacity-90 transition-opacity">
-                      <QrCode className="w-4 h-4" /> Lihat Kode Redeem
-                    </a>
-                  </div>
-                </>
-              )}
+                </div>
+              ))}
             </div>
           )}
         </div>
