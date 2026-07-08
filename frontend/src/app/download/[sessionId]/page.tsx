@@ -657,17 +657,13 @@ export default function DownloadPage() {
             <X className="w-6 h-6" strokeWidth={3} />
           </button>
 
-          {/* Large Image Showcase Card */}
-          <div 
-            className="neobrutal-box bg-white p-3 border-4 border-slate-900 rounded-2xl shadow-[8px_8px_0px_#1D1D23] max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-hidden"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking card itself
-          >
-            <img 
-              src={activePreviewUrl} 
-              alt="Preview Zoom" 
-              className="max-w-full max-h-[75vh] object-contain rounded-lg"
-            />
-          </div>
+          {/* Large Image Showcase (No Frame) */}
+          <img 
+            src={activePreviewUrl} 
+            alt="Preview Zoom" 
+            className="max-w-[95vw] max-h-[85vh] object-contain select-none shadow-2xl"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
+          />
 
           {/* Prompt info */}
           <p className="mt-4 text-white/70 text-xs font-black uppercase tracking-widest bg-black/45 px-4 py-2 rounded-full border border-white/20 select-none">
