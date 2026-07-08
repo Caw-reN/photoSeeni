@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { sessionsApi } from '@/lib/api';
-import { Download, Camera, Image as ImageIcon, Loader2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Download, Camera, Image as ImageIcon, Loader2, RefreshCw, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 // @ts-ignore
@@ -59,6 +59,10 @@ export default function DownloadPage() {
   // GIF state
   const [gifLoading, setGifLoading] = useState(false);
   const [gifDataUrl, setGifDataUrl] = useState<string | null>(null);
+  
+  // Lightbox preview modal state
+  const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
+  
   const frameImgRef = useRef<HTMLImageElement>(null);
   const hasRendered = useRef(false);
 
@@ -404,7 +408,13 @@ export default function DownloadPage() {
 
               {canShowLayered ? (
                 // Layered rendering: foto di slot + frame overlay (sama seperti checkout & result)
-                <div className="relative inline-block overflow-hidden w-full rounded-lg border-2 border-slate-900">
+                <div
+                  onClick={() => {
+                    if (canvasDataUrl) setActivePreviewUrl(canvasDataUrl);
+                    else if (session?.final_image_url) setActivePreviewUrl(proxyImageUrl(session.final_image_url));
+                  }}
+                  className="relative inline-block overflow-hidden w-full rounded-lg border-2 border-slate-900 cursor-zoom-in"
+                >
                   {coordinates.map((slot, index) => {
                     const data = slotsData[index];
                     return (
@@ -457,7 +467,8 @@ export default function DownloadPage() {
                   src={proxyImageUrl(session.final_image_url)}
                   alt="Final Photo Strip"
                   onLoad={() => renderToCanvas()}
-                  className="w-full h-auto object-contain border-2 border-slate-900 rounded-xl"
+                  onClick={() => setActivePreviewUrl(proxyImageUrl(session.final_image_url))}
+                  className="w-full h-auto object-contain border-2 border-slate-900 rounded-xl cursor-zoom-in"
                 />
               ) : (
                 <div className="aspect-[1/3] w-full bg-slate-100 flex items-center justify-center border-2 border-slate-900 rounded-xl">
@@ -534,7 +545,10 @@ export default function DownloadPage() {
                   <p className="text-slate-400 text-xs font-bold uppercase">Membuat Animasi GIF...</p>
                 </div>
               ) : gifDataUrl ? (
-                <div className="aspect-[4/3] w-full bg-slate-100 border-2 border-slate-900 rounded-xl overflow-hidden relative shadow-inner">
+                <div
+                  onClick={() => setActivePreviewUrl(gifDataUrl)}
+                  className="aspect-[4/3] w-full bg-slate-100 border-2 border-slate-900 rounded-xl overflow-hidden relative shadow-inner cursor-zoom-in"
+                >
                   <img
                     src={gifDataUrl}
                     alt="Animasi Poses"
@@ -599,7 +613,10 @@ export default function DownloadPage() {
                   className={`bg-white p-3 pb-5 border-4 border-slate-900 shadow-[4px_4px_0px_#1D1D23] rounded-xl flex flex-col justify-between transition-all duration-300 ${rotationClass} hover:-translate-y-2 hover:shadow-[6px_6px_0px_#1D1D23] cursor-pointer`}
                 >
                   {/* Polaroid Photo Frame */}
-                  <div className="aspect-[4/3] bg-slate-100 border-2 border-slate-900 rounded-lg overflow-hidden relative shadow-inner">
+                  <div
+                    onClick={() => setActivePreviewUrl(proxyImageUrl(photo.url))}
+                    className="aspect-[4/3] bg-slate-100 border-2 border-slate-900 rounded-lg overflow-hidden relative shadow-inner cursor-zoom-in"
+                  >
                     <img
                       src={proxyImageUrl(photo.url)}
                       alt={`Raw Photo ${index + 1}`}
@@ -624,6 +641,40 @@ export default function DownloadPage() {
           </div>
         )}
       </div>
+
+      {/* ═══ Lightbox Image Preview Modal ═══ */}
+      {activePreviewUrl && (
+        <div 
+          className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md p-4 transition-all duration-300"
+          onClick={() => setActivePreviewUrl(null)}
+        >
+          {/* Close Button */}
+          <button 
+            onClick={() => setActivePreviewUrl(null)}
+            className="fixed top-6 right-6 z-[160] w-12 h-12 flex items-center justify-center rounded-full bg-white border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] hover:bg-rose-100 hover:border-rose-500 hover:text-rose-600 transition-all duration-200 active:scale-95 cursor-pointer"
+            title="Tutup Preview"
+          >
+            <X className="w-6 h-6" strokeWidth={3} />
+          </button>
+
+          {/* Large Image Showcase Card */}
+          <div 
+            className="neobrutal-box bg-white p-3 border-4 border-slate-900 rounded-2xl shadow-[8px_8px_0px_#1D1D23] max-w-[90vw] max-h-[80vh] flex items-center justify-center overflow-hidden"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking card itself
+          >
+            <img 
+              src={activePreviewUrl} 
+              alt="Preview Zoom" 
+              className="max-w-full max-h-[75vh] object-contain rounded-lg"
+            />
+          </div>
+
+          {/* Prompt info */}
+          <p className="mt-4 text-white/70 text-xs font-black uppercase tracking-widest bg-black/45 px-4 py-2 rounded-full border border-white/20 select-none">
+            Klik di mana saja untuk menutup
+          </p>
+        </div>
+      )}
     </div>
   );
 }
