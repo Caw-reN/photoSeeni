@@ -33,17 +33,15 @@ export default function EventDetailPage() {
   const fetchDetail = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [eventRes, pkgsRes, statsRes] = await Promise.all([
+      const [eventRes, statsRes] = await Promise.all([
         eventsApi.adminGetEvent(Number(eventId)),
-        eventsApi.getPackages(String(eventId)), // In list detail we pass eventId slug to fetch pkgs
         eventsApi.adminGetEventStats(Number(eventId))
       ]);
       setEvent(eventRes);
-      // Wait, eventsApi.getPackages expects event slug. In eventRes, we have the slug!
-      // So let's fetch eventRes first, then packages using the slug!
+      setEventStats(statsRes);
+      
       const finalPkgs = await eventsApi.getPackages(eventRes.slug);
       setEventPackages(finalPkgs);
-      setEventStats(statsRes);
     } catch (err: any) {
       console.error(err);
       toast.error('Gagal memuat detail event.');
