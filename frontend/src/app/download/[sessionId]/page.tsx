@@ -474,11 +474,7 @@ export default function DownloadPage() {
                     <Loader2 className="w-3 h-3 animate-spin" /> Merender HD...
                   </span>
                 )}
-                {canvasDataUrl && !isRendering && (
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 border-2 border-emerald-400 px-3 py-1 rounded-full uppercase tracking-wider shadow-[2px_2px_0px_rgba(16,185,129,0.2)]">
-                    <CheckCircle2 className="w-3 h-3" /> HD Ready
-                  </span>
-                )}
+
                 {renderError && !isRendering && (
                   <button
                     onClick={() => { hasRendered.current = false; renderToCanvas(); }}
