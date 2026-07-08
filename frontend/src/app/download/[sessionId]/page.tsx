@@ -388,13 +388,13 @@ export default function DownloadPage() {
         </p>
       </div>
 
-      <div className="max-w-5xl w-full flex flex-col lg:flex-row gap-8 items-stretch">
+      <div className="max-w-5xl w-full flex flex-col lg:flex-row gap-8 items-start">
 
         {/* ══════════════════════════════════════════════
             KOLOM KIRI — Showcase Strip Foto
             ══════════════════════════════════════════════ */}
-        <div className="w-full lg:w-[360px] flex flex-col items-center flex-shrink-0">
-          <div className="neobrutal-box bg-white p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full h-full flex flex-col justify-between">
+        <div className="w-full lg:w-[280px] flex flex-col items-center flex-shrink-0">
+          <div className="neobrutal-box bg-white p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full flex flex-col">
             <div>
               <div className="text-center mb-4">
                 <span className="bg-violet-600 text-white font-black text-[10px] px-3.5 py-1.5 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] uppercase tracking-wider">
