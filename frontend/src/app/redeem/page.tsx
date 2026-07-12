@@ -87,6 +87,7 @@ export default function RedeemPage() {
           eventName: res.event?.name,
           packageName: res.package?.name,
           maxPhotos: res.package?.photo_count,
+          printCount: res.package?.print_count || 1,
           frameId: res.session.frame_id,
           sessionDuration: res.session.session_duration,
           allowedFrameIds: Array.isArray(res.event?.frame_templates)

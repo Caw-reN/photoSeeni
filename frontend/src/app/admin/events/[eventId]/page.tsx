@@ -14,7 +14,7 @@ type Event = {
   packages_count: number; redeem_codes_count: number; photo_sessions_count: number;
 };
 
-type EventPackage = { id: number; name: string; price: number; photo_count: number; is_active: boolean; description?: string; sort_order: number };
+type EventPackage = { id: number; name: string; price: number; photo_count: number; is_active: boolean; description?: string; sort_order: number; print_count?: number };
 
 type EventStats = {
   total_codes: number; paid_codes: number; used_codes: number;
@@ -221,7 +221,12 @@ export default function EventDetailPage() {
                         {pkg.is_active ? 'AKTIF' : 'OFF'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 font-bold mt-1">{pkg.photo_count} slot foto • Rp {pkg.price.toLocaleString('id-ID')}</p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <p className="text-xs text-slate-500 font-bold">{pkg.photo_count} slot foto • Rp {pkg.price.toLocaleString('id-ID')}</p>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${pkg.print_count && pkg.print_count > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-red-50 border-red-200 text-red-500'}`}>
+                        {pkg.print_count && pkg.print_count > 0 ? `🖨 ${pkg.print_count}x Cetak` : '❌ Tidak Cetak'}
+                      </span>
+                    </div>
                     {pkg.description && <p className="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[200px]">{pkg.description}</p>}
                   </div>
                   <div className="flex gap-1.5 shrink-0">

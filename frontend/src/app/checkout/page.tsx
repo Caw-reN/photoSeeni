@@ -80,7 +80,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
-  const [slotsData, setSlotsData] = useState<SlotData[]>([]);
+  const [slotsDataList, setSlotsDataList] = useState<SlotData[][]>([]);
   const [coordinates, setCoordinates] = useState<SlotCoordinate[]>([]);
   const [sessionId, setSessionId] = useState<string | number | null>(null);
   const [slotOrientations, setSlotOrientations] = useState<Record<number, 'landscape' | 'portrait'>>({});
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
     if (!isMounted) return;
     try {
       const storedFrame = localStorage.getItem('selected_frame');
-      const storedSlots = localStorage.getItem('arranged_slots');
+      const storedSlots = localStorage.getItem('arranged_slots_list') || localStorage.getItem('arranged_slots');
       const savedPhotos = localStorage.getItem('captured_photos');
 
       // Check if session ID is stored in captured_photos or config
@@ -141,11 +141,12 @@ export default function CheckoutPage() {
       }
 
       const frame: Frame = JSON.parse(storedFrame);
-      const slots: SlotData[] = JSON.parse(storedSlots);
+      const parsedSlots = JSON.parse(storedSlots);
+      const slotsList: SlotData[][] = Array.isArray(parsedSlots[0]) ? parsedSlots : [parsedSlots];
       const coords = getParsedCoordinates(frame);
 
       setSelectedFrame(frame);
-      setSlotsData(slots);
+      setSlotsDataList(slotsList);
       setCoordinates(coords);
 
       // Attempt to find session ID
@@ -194,8 +195,8 @@ export default function CheckoutPage() {
       setIsInitiatingPayment(true);
       try {
         await syncPhotosToServer(sessionId);
-        const finalStripBlob = await renderStripBlob();
-        await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlob, 150);
+        const finalStripBlobs = await renderStripBlobs();
+        await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlobs, 150);
         toast.success('Foto berhasil diproses!');
         
         // Clean up session info
@@ -241,9 +242,9 @@ export default function CheckoutPage() {
           
           try {
             // Render the custom strip matching coordinates and adjustments on client
-            const finalStripBlob = await renderStripBlob();
+            const finalStripBlobs = await renderStripBlobs();
             // Complete the session and upload the custom strip
-            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob, 150);
+            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150);
             
             toast.success('Pembayaran sukses & foto berhasil diproses!');
             setPaymentStep('success');
@@ -374,7 +375,17 @@ export default function CheckoutPage() {
     });
   };
 
-  const renderStripBlob = (): Promise<Blob> => {
+  const renderStripBlobs = async (): Promise<Blob[]> => {
+    const blobs: Blob[] = [];
+    for (let printIndex = 0; printIndex < slotsDataList.length; printIndex++) {
+      const slotsData = slotsDataList[printIndex];
+      const blob = await renderSingleStripBlob(slotsData);
+      blobs.push(blob);
+    }
+    return blobs;
+  };
+
+  const renderSingleStripBlob = (slotsData: SlotData[]): Promise<Blob> => {
     return new Promise(async (resolve, reject) => {
       const frameImg = document.querySelector('img[alt="Frame Overlay"]') as HTMLImageElement;
       if (!frameImg) {
@@ -430,7 +441,10 @@ export default function CheckoutPage() {
           ctx.scale(data.scale, data.scale);
           ctx.translate(data.translateX * scaleRatio, data.translateY * scaleRatio);
 
+          if (selectedFrame?.is_bw) ctx.filter = 'grayscale(100%)';
           ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.filter = 'none';
+          
           ctx.restore();
         }
 
@@ -515,10 +529,10 @@ export default function CheckoutPage() {
         await syncPhotosToServer(activeSession);
 
         // Render the custom strip matching coordinates and adjustments on client
-        const finalStripBlob = await renderStripBlob();
+        const finalStripBlobs = await renderStripBlobs();
 
         // Complete the session in the backend so it composites the strip
-        await sessionsApi.complete(Number(activeSession), selectedFrame.id, finalStripBlob, 150);
+        await sessionsApi.complete(Number(activeSession), selectedFrame.id, finalStripBlobs, 150);
         toast.success('Pembayaran sukses & foto berhasil diproses!');
         setPaymentStep('success');
         
@@ -563,8 +577,8 @@ export default function CheckoutPage() {
     setIsInitiatingPayment(true);
     try {
       await syncPhotosToServer(sessionId);
-      const finalStripBlob = await renderStripBlob();
-      await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlob, 150);
+      const finalStripBlobs = await renderStripBlobs();
+      await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150);
       toast.success('Foto berhasil diproses!');
       // Keep arranged_slots for result page to re-render correctly
       localStorage.removeItem('captured_photos');
@@ -646,6 +660,7 @@ export default function CheckoutPage() {
         <div className="relative inline-block overflow-hidden max-h-[60vh] md:max-h-[65vh]">
           {/* Photo slots layer */}
           {coordinates.map((slot, index) => {
+            const slotsData = slotsDataList[0] || [];
             const data = slotsData[index];
             return (
               <div

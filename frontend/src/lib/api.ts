@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://71a4-103-224-73-153.ngrok-free.app/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://a035-160-22-192-46.ngrok-free.app/api';
 
 const getHeaders = () => {
   const headers: HeadersInit = {
@@ -161,10 +161,16 @@ export const sessionsApi = {
     });
   },
 
-  complete: (sessionId: number, frameId?: number, finalStripBlob?: Blob, gifSpeed?: number) => {
-    if (finalStripBlob) {
+  complete: (sessionId: number, frameId?: number, finalStripBlobs?: Blob | Blob[], gifSpeed?: number) => {
+    if (finalStripBlobs) {
       const formData = new FormData();
-      formData.append('final_strip', finalStripBlob, 'final_strip.jpg');
+      if (Array.isArray(finalStripBlobs)) {
+        finalStripBlobs.forEach((blob, index) => {
+          formData.append('final_strips[]', blob, `final_strip_${index}.jpg`);
+        });
+      } else {
+        formData.append('final_strip', finalStripBlobs, 'final_strip.jpg');
+      }
       if (frameId) {
         formData.append('frame_id', frameId.toString());
       }
@@ -369,11 +375,9 @@ export const eventsApi = {
     description?: string;
     price: number;
     photo_count: number;
-    frame_template_id?: number | null;
-    is_active?: boolean;
     sort_order?: number;
     session_duration?: number;
-    allow_print?: boolean;
+    print_count?: number;
   }) => apiRequest(`/admin/events/${eventId}/packages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -385,11 +389,9 @@ export const eventsApi = {
     description: string;
     price: number;
     photo_count: number;
-    frame_template_id: number | null;
-    is_active: boolean;
     sort_order: number;
     session_duration: number;
-    allow_print: boolean;
+    print_count: number;
   }>) => apiRequest(`/admin/events/${eventId}/packages/${packageId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -115,6 +115,38 @@ class PhotoSessionController extends Controller
             ], 422);
         }
 
+        if ($request->hasFile('final_strips')) {
+            $paths = [];
+            foreach ($request->file('final_strips') as $index => $file) {
+                $paths[] = $file->store("sessions/{$session->id}", 'public');
+            }
+            
+            if ($session->final_image_paths) {
+                foreach ($session->final_image_paths as $oldPath) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            } elseif ($session->final_image_path) {
+                Storage::disk('public')->delete($session->final_image_path);
+            }
+            
+            $updateData = [
+                'status' => 'completed',
+                'final_image_path' => count($paths) > 0 ? $paths[0] : null,
+                'final_image_paths' => $paths,
+            ];
+            
+            $session->update($updateData);
+
+            // If this is an event session, send result notification to buyer
+            $this->maybeNotifyEventResult($session);
+
+            return response()->json([
+                'session' => $session->load(['frame', 'photos']),
+                'final_image_url' => count($paths) > 0 ? Storage::disk('public')->url($paths[0]) : null,
+                'final_image_urls' => array_map(fn($p) => Storage::disk('public')->url($p), $paths),
+            ]);
+        }
+
         if ($request->hasFile('final_strip')) {
             $path = $request->file('final_strip')->store("sessions/{$session->id}", 'public');
             if ($session->final_image_path) {
@@ -124,6 +156,7 @@ class PhotoSessionController extends Controller
             $updateData = [
                 'status' => 'completed',
                 'final_image_path' => $path,
+                'final_image_paths' => [$path],
             ];
             
             $session->update($updateData);
@@ -134,6 +167,7 @@ class PhotoSessionController extends Controller
             return response()->json([
                 'session' => $session->load(['frame', 'photos']),
                 'final_image_url' => Storage::disk('public')->url($path),
+                'final_image_urls' => [Storage::disk('public')->url($path)],
             ]);
         }
 
@@ -143,6 +177,7 @@ class PhotoSessionController extends Controller
             $session->update([
                 'status' => 'completed',
                 'final_image_path' => $finalPath,
+                'final_image_paths' => [$finalPath],
             ]);
         }
 
@@ -152,6 +187,7 @@ class PhotoSessionController extends Controller
         return response()->json([
             'session' => $session->load(['frame', 'photos']),
             'final_image_url' => Storage::disk('public')->url($session->final_image_path),
+            'final_image_urls' => $session->final_image_paths ? array_map(fn($p) => Storage::disk('public')->url($p), $session->final_image_paths) : [Storage::disk('public')->url($session->final_image_path)],
         ]);
     }
 
@@ -174,6 +210,11 @@ class PhotoSessionController extends Controller
         $session = PhotoSession::with(['frame', 'photos', 'event'])->findOrFail($sessionId);
 
         $responseData = $session->toArray();
+        if ($session->final_image_paths && is_array($session->final_image_paths)) {
+            $responseData['final_image_urls'] = array_map(fn($p) => Storage::disk('public')->url($p), $session->final_image_paths);
+        } elseif ($session->final_image_path) {
+            $responseData['final_image_urls'] = [Storage::disk('public')->url($session->final_image_path)];
+        }
         if ($session->final_image_path) {
             $responseData['final_image_url'] = Storage::disk('public')->url($session->final_image_path);
         }
@@ -199,7 +240,11 @@ class PhotoSessionController extends Controller
             Storage::disk('public')->delete($photo->file_path);
         }
 
-        if ($session->final_image_path) {
+        if ($session->final_image_paths) {
+            foreach ($session->final_image_paths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+        } elseif ($session->final_image_path) {
             Storage::disk('public')->delete($session->final_image_path);
         }
 
@@ -365,6 +410,11 @@ class PhotoSessionController extends Controller
 
         if ($session->payment_status === 'paid') {
             $responseData = $session->toArray();
+            if ($session->final_image_paths && is_array($session->final_image_paths)) {
+                $responseData['final_image_urls'] = array_map(fn($p) => Storage::disk('public')->url($p), $session->final_image_paths);
+            } elseif ($session->final_image_path) {
+                $responseData['final_image_urls'] = [Storage::disk('public')->url($session->final_image_path)];
+            }
             if ($session->final_image_path) {
                 $responseData['final_image_url'] = Storage::disk('public')->url($session->final_image_path);
             }
@@ -396,6 +446,7 @@ class PhotoSessionController extends Controller
                                         $finalPath = $this->compositeStrip($session, $photos);
                                         $session->status = 'completed';
                                         $session->final_image_path = $finalPath;
+                                        $session->final_image_paths = [$finalPath];
                                     }
                                 }
                                 $session->save();
@@ -412,6 +463,11 @@ class PhotoSessionController extends Controller
         }
 
         $responseData = $session->toArray();
+        if ($session->final_image_paths && is_array($session->final_image_paths)) {
+            $responseData['final_image_urls'] = array_map(fn($p) => Storage::disk('public')->url($p), $session->final_image_paths);
+        } elseif ($session->final_image_path) {
+            $responseData['final_image_urls'] = [Storage::disk('public')->url($session->final_image_path)];
+        }
         if ($session->final_image_path) {
             $responseData['final_image_url'] = Storage::disk('public')->url($session->final_image_path);
         }
@@ -460,6 +516,7 @@ class PhotoSessionController extends Controller
                         $finalPath = $this->compositeStrip($session, $photos);
                         $session->status = 'completed';
                         $session->final_image_path = $finalPath;
+                        $session->final_image_paths = [$finalPath];
                     }
                 }
                 $session->save();

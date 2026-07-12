@@ -21,7 +21,7 @@ class EventPackage extends Model
         'is_active',
         'sort_order',
         'session_duration',
-        'allow_print',
+        'print_count',
     ];
 
     protected $casts = [
@@ -30,7 +30,7 @@ class EventPackage extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
         'session_duration' => 'integer',
-        'allow_print' => 'boolean',
+        'print_count' => 'integer',
     ];
 
     public function event(): BelongsTo

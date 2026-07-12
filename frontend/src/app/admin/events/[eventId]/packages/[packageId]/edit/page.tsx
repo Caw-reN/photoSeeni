@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { eventsApi, frameTemplatesApi } from '@/lib/api';
 
 type FrameTemplate = { id: number; name: string };
-type EventPackage = { id: number; name: string; price: number; photo_count: number; is_active: boolean; description?: string; sort_order: number; frame_template_id?: number | null };
+type EventPackage = { id: number; name: string; price: number; photo_count: number; is_active: boolean; description?: string; sort_order: number; frame_template_id?: number | null; print_count?: number };
 
 export default function EditPackagePage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function EditPackagePage() {
     is_active: true,
     sort_order: '0',
     session_duration: '3',
-    allow_print: true
+    print_count: '1'
   });
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function EditPackagePage() {
         is_active: pkg.is_active ?? true,
         sort_order: String(pkg.sort_order || '0'),
         session_duration: String(pkg.session_duration ? Math.round(pkg.session_duration / 60) : '3'), // seconds to minutes
-        allow_print: pkg.allow_print ?? true
+        print_count: String(pkg.print_count ?? '1')
       });
       setIsLoading(false);
     }).catch((err) => {
@@ -80,7 +80,7 @@ export default function EditPackagePage() {
         is_active: form.is_active,
         sort_order: Number(form.sort_order),
         session_duration: Number(form.session_duration || '3') * 60, // convert minutes to seconds
-        allow_print: form.allow_print
+        print_count: Number(form.print_count)
       };
 
       await eventsApi.adminUpdatePackage(Number(eventId), Number(packageId), payload);
@@ -207,16 +207,18 @@ export default function EditPackagePage() {
                 required
               />
             </div>
-            <div className="flex flex-col justify-end">
-              <label className="flex items-center gap-3 cursor-pointer select-none pb-3">
-                <input 
-                  type="checkbox" 
-                  checked={form.allow_print} 
-                  onChange={e => setForm(p => ({ ...p, allow_print: e.target.checked }))} 
-                  className="w-5 h-5 accent-[#8A2BE2]" 
-                />
-                <span className="text-sm font-bold text-[#1D1D23]">Bisa Cetak Fisik</span>
-              </label>
+            <div>
+              <label className="text-xs font-black uppercase text-[#1D1D23] mb-1.5 block">Jumlah Cetak Fisik *</label>
+              <input 
+                type="number" 
+                value={form.print_count} 
+                onChange={e => setForm(p => ({ ...p, print_count: e.target.value }))} 
+                placeholder="1" 
+                min="0"
+                className="w-full border-2 border-[#1D1D23] rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-[#8A2BE2]" 
+                required
+              />
+              <p className="text-[10px] text-gray-500 mt-1 font-semibold">0 = tidak bisa cetak</p>
             </div>
           </div>
 

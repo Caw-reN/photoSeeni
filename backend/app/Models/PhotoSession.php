@@ -29,6 +29,7 @@ class PhotoSession extends Model
         'max_photos',
         'gif_speed',
         'session_duration',
+        'final_image_paths',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class PhotoSession extends Model
         'max_photos' => 'integer',
         'gif_speed' => 'integer',
         'session_duration' => 'integer',
+        'final_image_paths' => 'array',
     ];
 
     public function user(): BelongsTo

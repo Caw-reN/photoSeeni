@@ -12,6 +12,8 @@ import {
   MousePointerClick,
   Image as ImageIcon,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -92,7 +94,9 @@ export default function EditPhotoPage() {
   const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhoto[]>([]);
   const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
   const [coordinates, setCoordinates] = useState<SlotCoordinate[]>([]);
-  const [slotsData, setSlotsData] = useState<SlotData[]>([]);
+  const [slotsDataList, setSlotsDataList] = useState<SlotData[][]>([]);
+  const [activePrintIndex, setActivePrintIndex] = useState(0);
+  const [printCount, setPrintCount] = useState(1);
   const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Track orientation per slot: 'landscape' = fit height, 'portrait' = fit width
@@ -109,6 +113,7 @@ export default function EditPhotoPage() {
     try {
       const storedPhotos = localStorage.getItem('captured_photos');
       const storedFrame = localStorage.getItem('selected_frame');
+      const storedEventSession = localStorage.getItem('event_session_info');
       if (!storedPhotos || !storedFrame) {
         toast.error('Data sesi tidak ditemukan, kembali ke pemilihan frame.');
         router.push('/select-frame');
@@ -120,14 +125,43 @@ export default function EditPhotoPage() {
       setCapturedPhotos(photos);
       setSelectedFrame(frame);
       setCoordinates(coords);
-      const initialSlotsData: SlotData[] = coords.map((_, index) => ({
-        photoUrl: photos[index] ? photos[index].url : '',
-        scale: 1,
-        rotate: 0,
-        translateX: 0,
-        translateY: 0,
-      }));
-      setSlotsData(initialSlotsData);
+
+      // Determine print count from event session or default 1
+      let pCount = 1;
+      if (storedEventSession) {
+        try {
+          const ev = JSON.parse(storedEventSession);
+          if (ev?.printCount) pCount = ev.printCount;
+        } catch (_) {}
+      }
+      setPrintCount(pCount);
+
+      // Try to restore from already-arranged data, otherwise initialize fresh
+      const storedSlotsList = localStorage.getItem('arranged_slots_list');
+      const storedSlots = localStorage.getItem('arranged_slots');
+
+      let initialList: SlotData[][];
+      if (storedSlotsList) {
+        initialList = JSON.parse(storedSlotsList);
+        // Ensure printCount matches
+        if (initialList.length !== pCount) {
+          const baseSlots = initialList[0] || [];
+          initialList = Array.from({ length: pCount }, (_, pi) => initialList[pi] || baseSlots);
+        }
+      } else if (storedSlots) {
+        const base: SlotData[] = JSON.parse(storedSlots);
+        initialList = Array.from({ length: pCount }, () => base);
+      } else {
+        const fresh: SlotData[] = coords.map((_, index) => ({
+          photoUrl: photos[index] ? photos[index].url : '',
+          scale: 1,
+          rotate: 0,
+          translateX: 0,
+          translateY: 0,
+        }));
+        initialList = Array.from({ length: pCount }, () => fresh);
+      }
+      setSlotsDataList(initialList);
       setIsLoading(false);
     } catch (error) {
       console.error(error);
@@ -166,10 +200,11 @@ export default function EditPhotoPage() {
     e.preventDefault();
     const photoUrl = e.dataTransfer.getData('text/plain');
     if (photoUrl) {
-      setSlotsData(prev => {
-        const newData = [...prev];
-        newData[slotIndex] = { ...newData[slotIndex], photoUrl };
-        return newData;
+      setSlotsDataList(prev => {
+        const newList = prev.map(arr => [...arr]);
+        newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
+        newList[activePrintIndex][slotIndex] = { ...newList[activePrintIndex][slotIndex], photoUrl };
+        return newList;
       });
       setActiveSlotIndex(slotIndex);
     }
@@ -179,33 +214,37 @@ export default function EditPhotoPage() {
 
   const handleControlChange = (field: keyof SlotData, value: number) => {
     if (activeSlotIndex === null) return;
-    setSlotsData(prev => {
-      const newData = [...prev];
-      newData[activeSlotIndex] = { ...newData[activeSlotIndex], [field]: value };
-      return newData;
+    setSlotsDataList(prev => {
+      const newList = prev.map(arr => [...arr]);
+      newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
+      newList[activePrintIndex][activeSlotIndex] = { ...newList[activePrintIndex][activeSlotIndex], [field]: value };
+      return newList;
     });
   };
 
   const handleProceed = () => {
-    localStorage.setItem('arranged_slots', JSON.stringify(slotsData));
+    localStorage.setItem('arranged_slots_list', JSON.stringify(slotsDataList));
+    localStorage.setItem('arranged_slots', JSON.stringify(slotsDataList[0] || []));
     router.push('/checkout');
   };
 
   // Tap foto di strip → masukkan ke slot aktif atau slot kosong berikutnya
   const handlePhotoTap = (photoUrl: string) => {
     if (activeSlotIndex !== null) {
-      setSlotsData(prev => {
-        const n = [...prev];
-        n[activeSlotIndex] = { ...n[activeSlotIndex], photoUrl };
-        return n;
+      setSlotsDataList(prev => {
+        const newList = prev.map(arr => [...arr]);
+        newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
+        newList[activePrintIndex][activeSlotIndex] = { ...newList[activePrintIndex][activeSlotIndex], photoUrl };
+        return newList;
       });
     } else {
       const emptyIdx = slotsData.findIndex(s => !s.photoUrl);
       const targetIdx = emptyIdx !== -1 ? emptyIdx : 0;
-      setSlotsData(prev => {
-        const n = [...prev];
-        n[targetIdx] = { ...n[targetIdx], photoUrl };
-        return n;
+      setSlotsDataList(prev => {
+        const newList = prev.map(arr => [...arr]);
+        newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
+        newList[activePrintIndex][targetIdx] = { ...newList[activePrintIndex][targetIdx], photoUrl };
+        return newList;
       });
       setActiveSlotIndex(targetIdx);
     }
@@ -222,6 +261,7 @@ export default function EditPhotoPage() {
     );
   }
 
+  const slotsData = slotsDataList[activePrintIndex] || [];
   const activeData = activeSlotIndex !== null ? slotsData[activeSlotIndex] : null;
 
   return (
@@ -247,14 +287,14 @@ export default function EditPhotoPage() {
           <h2 className="text-xl font-black text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">Foto Kamu</h2>
           <p className="text-indigo-100 text-xs font-bold mt-1">Seret ke slot atau klik untuk isi</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-1 gap-3">
           {capturedPhotos.map((photo, index) => (
             <div
               key={index}
               draggable
               onDragStart={(e) => handleDragStart(e, photo.url)}
               onClick={() => handlePhotoTap(photo.url)}
-              className="relative aspect-[3/4] shrink-0 bg-slate-200 border-4 border-slate-900 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] transition-all"
+              className="relative aspect-[4/3] shrink-0 bg-slate-200 border-4 border-slate-900 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] transition-all"
             >
               <img src={photo.url} alt={`Foto ${index + 1}`} className="w-full h-full object-cover pointer-events-none" />
               <div className="absolute bottom-0 right-0 bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded-tl-lg">
@@ -270,6 +310,39 @@ export default function EditPhotoPage() {
         <div className="shrink-0 mb-4 text-center">
           <h1 className="text-3xl font-black text-slate-900 mb-1 drop-shadow-[2px_2px_0px_rgba(255,255,255,1)]">Penempatan Foto</h1>
           <p className="text-slate-600 font-extrabold text-sm border-b-2 border-slate-400 inline-block pb-1">Sesuaikan posisi, ukuran, dan rotasi foto</p>
+          {printCount > 1 && (
+            <div className="mt-4 flex gap-2 items-center justify-center w-full">
+              <button
+                onClick={() => { setActivePrintIndex(p => Math.max(0, p - 1)); setActiveSlotIndex(null); }}
+                disabled={activePrintIndex === 0}
+                className="p-1.5 rounded-full border-2 border-slate-900 disabled:opacity-30 bg-white hover:bg-slate-100 transition-colors shrink-0"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                {Array.from({ length: printCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setActivePrintIndex(i); setActiveSlotIndex(null); }}
+                    className={`px-3 py-1 rounded-full font-black text-xs border-2 border-slate-900 shrink-0 transition-colors ${
+                      activePrintIndex === i
+                        ? 'bg-[#8A2BE2] text-white'
+                        : 'bg-white text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    Cetakan {i + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setActivePrintIndex(p => Math.min(printCount - 1, p + 1)); setActiveSlotIndex(null); }}
+                disabled={activePrintIndex === printCount - 1}
+                className="p-1.5 rounded-full border-2 border-slate-900 disabled:opacity-30 bg-white hover:bg-slate-100 transition-colors shrink-0"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex-1 w-full flex items-center justify-center overflow-hidden" onClick={() => setActiveSlotIndex(null)}>
           <div className="relative inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" onClick={(e) => e.stopPropagation()}>
@@ -304,6 +377,7 @@ export default function EditPhotoPage() {
                           : { width: '100%', height: 'auto' }),
                         transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
                         transformOrigin: 'center center',
+                        filter: selectedFrame?.is_bw ? 'grayscale(100%)' : 'none',
                       }}
                       onLoad={(e) => {
                         const img = e.currentTarget;
@@ -380,12 +454,47 @@ export default function EditPhotoPage() {
         {/* ── 1. PREVIEW AREA (atas, mengisi sisa ruang) ── */}
         <div className="relative flex-1 flex items-center justify-center bg-[#1D1D23] overflow-hidden min-h-0">
           {/* Header kecil */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-14 pb-2 bg-gradient-to-b from-black/60 to-transparent">
-            <span className="text-white font-black text-sm tracking-wide">Penempatan Foto</span>
-            {activeSlotIndex !== null && (
-              <span className="bg-amber-400 text-slate-900 font-black text-xs px-3 py-1 rounded-full border-2 border-slate-900">
-                SLOT {activeSlotIndex + 1} AKTIF
-              </span>
+          <div className="absolute top-0 left-0 right-0 z-10 flex flex-col items-center px-4 pt-14 pb-2 bg-gradient-to-b from-black/60 to-transparent pointer-events-auto">
+            <div className="flex items-center justify-between w-full">
+              <span className="text-white font-black text-sm tracking-wide">Penempatan Foto</span>
+              {activeSlotIndex !== null && (
+                <span className="bg-amber-400 text-slate-900 font-black text-xs px-3 py-1 rounded-full border-2 border-slate-900">
+                  SLOT {activeSlotIndex + 1} AKTIF
+                </span>
+              )}
+            </div>
+            {printCount > 1 && (
+              <div className="flex gap-2 items-center w-full mt-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActivePrintIndex(p => Math.max(0, p - 1)); setActiveSlotIndex(null); }}
+                  disabled={activePrintIndex === 0}
+                  className="p-1 rounded-full border-2 border-white/60 disabled:opacity-30 bg-white/20 backdrop-blur hover:bg-white/30 transition-colors shrink-0"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 text-white" />
+                </button>
+                <div className="flex gap-1.5 overflow-x-auto flex-1" style={{ scrollbarWidth: 'none' }}>
+                  {Array.from({ length: printCount }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => { e.stopPropagation(); setActivePrintIndex(i); setActiveSlotIndex(null); }}
+                      className={`px-3 py-1 rounded-full font-black text-[10px] border-2 shrink-0 transition-colors ${
+                        activePrintIndex === i
+                          ? 'bg-[#8A2BE2] text-white border-[#8A2BE2]'
+                          : 'bg-white/20 text-white border-white/40 backdrop-blur hover:bg-white/30'
+                      }`}
+                    >
+                      Cetakan {i + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActivePrintIndex(p => Math.min(printCount - 1, p + 1)); setActiveSlotIndex(null); }}
+                  disabled={activePrintIndex === printCount - 1}
+                  className="p-1 rounded-full border-2 border-white/60 disabled:opacity-30 bg-white/20 backdrop-blur hover:bg-white/30 transition-colors shrink-0"
+                >
+                  <ChevronRight className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
             )}
           </div>
 
@@ -427,6 +536,7 @@ export default function EditPhotoPage() {
                           : { width: '100%', height: 'auto' }),
                         transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
                         transformOrigin: 'center center',
+                        filter: selectedFrame?.is_bw ? 'grayscale(100%)' : 'none',
                       }}
                       onLoad={(e) => {
                         const img = e.currentTarget;

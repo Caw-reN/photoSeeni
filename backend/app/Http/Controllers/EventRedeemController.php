@@ -267,7 +267,7 @@ class EventRedeemController extends Controller
                 ]
             ),
             'package'     => array_merge(
-                $redeemCode->package->only(['id', 'name', 'photo_count', 'description']),
+                $redeemCode->package->only(['id', 'name', 'photo_count', 'description', 'print_count']),
                 ['frame' => $redeemCode->package->frameTemplate]
             ),
         ]);
@@ -336,8 +336,13 @@ class EventRedeemController extends Controller
 
         return response()->json([
             'session' => $session->load(['frame', 'photos']),
-            'package' => $redeemCode->package->only(['name', 'photo_count']),
-            'event'   => $redeemCode->event->only(['name', 'slug', 'organizer_name']),
+            'package' => $redeemCode->package->only(['name', 'photo_count', 'print_count']),
+            'event'   => array_merge(
+                $redeemCode->event->only(['name', 'slug', 'organizer_name']),
+                [
+                    'frame_templates' => $redeemCode->event->frameTemplates()->get(['frame_templates.id'])->values(),
+                ]
+            ),
         ], 201);
     }
 

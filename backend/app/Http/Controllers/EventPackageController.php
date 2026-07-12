@@ -38,7 +38,7 @@ class EventPackageController extends Controller
             'is_active'         => 'boolean',
             'sort_order'        => 'integer',
             'session_duration'  => 'integer|min:10',
-            'allow_print'       => 'boolean',
+            'print_count'       => 'integer|min:0|max:50',
         ]);
 
         $package = $event->packages()->create($validated);
@@ -62,7 +62,7 @@ class EventPackageController extends Controller
             'is_active'         => 'sometimes|boolean',
             'sort_order'        => 'sometimes|integer',
             'session_duration'  => 'sometimes|integer|min:10',
-            'allow_print'       => 'sometimes|boolean',
+            'print_count'       => 'sometimes|integer|min:0|max:50',
         ]);
 
         $package->update($validated);
