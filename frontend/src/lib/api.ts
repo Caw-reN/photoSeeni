@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://e31a-103-224-73-153.ngrok-free.app/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://71a4-103-224-73-153.ngrok-free.app/api';
 
 const getHeaders = () => {
   const headers: HeadersInit = {
@@ -130,6 +130,10 @@ export const frameTemplatesApi = {
   }),
 
   toggleActive: (id: number | string) => apiRequest(`/admin/frame-templates/${id}/toggle-active`, {
+    method: 'PATCH',
+  }),
+
+  toggleBw: (id: number | string) => apiRequest(`/admin/frame-templates/${id}/toggle-bw`, {
     method: 'PATCH',
   }),
 
@@ -321,6 +325,7 @@ export const eventsApi = {
     location?: string;
     event_date?: string;
     frame_template_id?: number | null;
+    frame_template_ids?: number[];
     is_active?: boolean;
     expires_at?: string | null;
   }) => apiRequest('/admin/events', {
@@ -336,12 +341,19 @@ export const eventsApi = {
     location: string;
     event_date: string;
     frame_template_id: number | null;
+    frame_template_ids: number[];
     is_active: boolean;
     expires_at: string | null;
   }>) => apiRequest(`/admin/events/${eventId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+  }),
+
+  adminSyncFrames: (eventId: number, frameTemplateIds: number[]) => apiRequest(`/admin/events/${eventId}/sync-frames`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ frame_template_ids: frameTemplateIds }),
   }),
 
   adminDeleteEvent: (eventId: number) => apiRequest(`/admin/events/${eventId}`, {

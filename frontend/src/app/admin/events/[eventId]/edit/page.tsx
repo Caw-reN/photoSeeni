@@ -2,17 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi, frameTemplatesApi } from '@/lib/api';
 
-type FrameTemplate = { id: number; name: string };
+const BACKEND_URL = (() => {
+  const u = process.env.NEXT_PUBLIC_API_URL;
+  if (u && !u.startsWith('/')) return u.replace(/\/api\/?$/, '');
+  return '';
+})();
+
+const proxyImageUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  const abs = url.startsWith('http') ? url : `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  return `/api/proxy-image?url=${encodeURIComponent(abs)}`;
+};
+
+type FrameTemplate = { id: number; name: string; is_bw?: boolean; image_url?: string };
 
 export default function EditEventPage() {
   const router = useRouter();
   const { eventId } = useParams();
   
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
+  const [selectedFrameIds, setSelectedFrameIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -22,7 +35,6 @@ export default function EditEventPage() {
     description: '',
     location: '',
     event_date: '',
-    frame_template_id: '',
     expires_at: '',
     is_active: true
   });
@@ -40,10 +52,13 @@ export default function EditEventPage() {
         description: event.description || '',
         location: event.location || '',
         event_date: event.event_date || '',
-        frame_template_id: event.frame_template_id ? String(event.frame_template_id) : '',
         expires_at: event.expires_at ? event.expires_at.slice(0, 16) : '',
         is_active: event.is_active ?? true
       });
+      // Pre-fill selected frame templates from pivot
+      if (Array.isArray(event.frame_templates)) {
+        setSelectedFrameIds(event.frame_templates.map((f: any) => f.id));
+      }
       setIsLoading(false);
     }).catch((err) => {
       console.error(err);
@@ -51,6 +66,12 @@ export default function EditEventPage() {
       router.push('/admin/events');
     });
   }, [eventId, router]);
+
+  const toggleFrame = (id: number) => {
+    setSelectedFrameIds(prev =>
+      prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id]
+    );
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +87,7 @@ export default function EditEventPage() {
         description: form.description || '',
         location: form.location || '',
         event_date: form.event_date || '',
-        frame_template_id: form.frame_template_id ? Number(form.frame_template_id) : null,
+        frame_template_ids: selectedFrameIds,
         expires_at: form.expires_at || null,
         is_active: form.is_active,
       };
@@ -163,18 +184,62 @@ export default function EditEventPage() {
             </div>
           </div>
 
+          {/* Multi-Frame Template Selector */}
           <div>
-            <label className="text-xs font-black uppercase text-[#1D1D23] mb-1.5 block">Frame Default Event</label>
-            <select 
-              value={form.frame_template_id} 
-              onChange={e => setForm(p => ({ ...p, frame_template_id: e.target.value }))} 
-              className="w-full border-2 border-[#1D1D23] rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-[#8A2BE2] bg-white"
-            >
-              <option value="">Pilih frame default (opsional)</option>
-              {frameTemplates.map(f => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
+            <label className="text-xs font-black uppercase text-[#1D1D23] mb-2 block">
+              Frame Template yang Diizinkan
+              <span className="ml-2 text-[#8A2BE2] normal-case font-bold">({selectedFrameIds.length} dipilih)</span>
+            </label>
+            <p className="text-[10px] text-gray-400 font-medium mb-3">
+              Peserta hanya bisa memilih frame yang dicentang. Jika tidak ada yang dipilih, semua frame aktif tersedia.
+            </p>
+            {frameTemplates.length === 0 ? (
+              <p className="text-sm text-gray-400 font-medium py-2">Belum ada frame template.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto border-2 border-[#1D1D23] rounded-xl p-3">
+                {frameTemplates.map(f => {
+                  const selected = selectedFrameIds.includes(f.id);
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => toggleFrame(f.id)}
+                      className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all text-left cursor-pointer ${
+                        selected
+                          ? 'border-[#8A2BE2] bg-violet-50 shadow-[2px_2px_0px_#8A2BE2]'
+                          : 'border-slate-200 bg-white hover:border-slate-400'
+                      }`}
+                    >
+                      {/* Checkmark */}
+                      <div className={`absolute top-1.5 right-1.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
+                        selected ? 'bg-[#8A2BE2] border-[#8A2BE2]' : 'border-slate-300 bg-white'
+                      }`}>
+                        {selected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                      </div>
+                      {/* Frame thumbnail */}
+                      {f.image_url ? (
+                        <img
+                          src={proxyImageUrl(f.image_url)}
+                          alt={f.name}
+                          className="w-full h-16 object-contain rounded-lg"
+                          style={f.is_bw ? { filter: 'grayscale(1)' } : {}}
+                        />
+                      ) : (
+                        <div className="w-full h-16 bg-slate-100 rounded-lg flex items-center justify-center">
+                          <span className="text-slate-300 text-[10px]">No img</span>
+                        </div>
+                      )}
+                      <span className="text-[10px] font-black text-[#1D1D23] text-center leading-tight line-clamp-2 w-full">
+                        {f.name}
+                      </span>
+                      {f.is_bw && (
+                        <span className="text-[8px] font-black bg-[#1D1D23] text-white px-1.5 py-0.5 rounded tracking-widest">B&W</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <label className="flex items-center gap-3 cursor-pointer mt-2 select-none">

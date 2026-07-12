@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Event extends Model
 {
@@ -38,6 +39,12 @@ class Event extends Model
     public function frameTemplate(): BelongsTo
     {
         return $this->belongsTo(FrameTemplate::class, 'frame_template_id');
+    }
+
+    // Multiple frame templates linked to this event (via pivot)
+    public function frameTemplates(): BelongsToMany
+    {
+        return $this->belongsToMany(FrameTemplate::class, 'event_frame_templates')->withTimestamps();
     }
 
     public function packages(): HasMany

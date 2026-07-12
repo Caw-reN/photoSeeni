@@ -26,6 +26,7 @@ type Frame = {
   slots?: Slot[];
   coordinates?: string | Slot[];
   description?: string;
+  is_bw?: boolean;
 };
 
 const BACKEND_URL = (() => {
@@ -148,44 +149,49 @@ export default function SelectFramePage() {
 
         // Check if there is an event session info stored
         const storedInfo = localStorage.getItem('event_session_info');
-        let allowedFrameId: number | null = null;
+        let allowedFrameIds: number[] = [];
         if (storedInfo) {
           try {
             const info = JSON.parse(storedInfo);
-            if (info.frameId) {
-              allowedFrameId = Number(info.frameId);
+            if (Array.isArray(info.allowedFrameIds) && info.allowedFrameIds.length > 0) {
+              allowedFrameIds = info.allowedFrameIds.map(Number);
+            } else if (info.frameId) {
+              // legacy fallback: single frameId
+              allowedFrameIds = [Number(info.frameId)];
             }
           } catch (e) {
             console.error('Failed to parse event_session_info:', e);
           }
         }
 
-        // Filter frames if in event mode and frameId is restricted
-        if (allowedFrameId !== null) {
-          const filteredList = framesList.filter(f => f.id === allowedFrameId);
+        // Filter frames if in event mode and allowedFrameIds is set
+        if (allowedFrameIds.length > 0) {
+          const filteredList = framesList.filter(f => allowedFrameIds.includes(f.id));
           if (filteredList.length > 0) {
             framesList = filteredList;
           } else {
-            // If the event frame template is not in the list, fetch it directly
-            try {
-              const singleRes = await fetch(`${apiUrl}/frame-templates/${allowedFrameId}`, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json',
-                  'ngrok-skip-browser-warning': '69420'
+            // Fetch each allowed frame directly
+            const fetched: Frame[] = [];
+            for (const fid of allowedFrameIds) {
+              try {
+                const singleRes = await fetch(`${apiUrl}/frame-templates/${fid}`, {
+                  method: 'GET',
+                  mode: 'cors',
+                  headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': '69420'
+                  }
+                });
+                if (singleRes.ok) {
+                  const singleData = await singleRes.json();
+                  if (singleData?.data) fetched.push(singleData.data);
                 }
-              });
-              if (singleRes.ok) {
-                const singleData = await singleRes.json();
-                if (singleData && singleData.data) {
-                  framesList = [singleData.data];
-                }
+              } catch (e) {
+                console.error('Failed to fetch event frame template:', e);
               }
-            } catch (e) {
-              console.error('Failed to fetch specific event frame template:', e);
             }
+            if (fetched.length > 0) framesList = fetched;
           }
         }
 
@@ -284,16 +290,23 @@ export default function SelectFramePage() {
                       : 'border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none'
                   }`}
                 >
-                  {/* Frame Thumbnail — aspect ratio natural sesuai gambar frame */}
-                  <div className="w-full rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-100">
+                  {/* Frame Thumbnail */}
+                  <div className="w-full rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-100 relative">
                     <img
                       src={getFrameImageUrl(frame)}
                       alt={frame.name || 'Frame'}
                       className="w-full h-auto object-contain rounded-xl block"
+                      style={frame.is_bw ? { filter: 'grayscale(1)' } : {}}
                       onError={(e) => {
                         e.currentTarget.src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22120%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%23e2e8f0%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2212%22 fill=%22%2394a3b8%22>No Image</text></svg>';
                       }}
                     />
+                    {/* B&W Badge */}
+                    {frame.is_bw && (
+                      <div className="absolute top-1.5 left-1.5 bg-[#1D1D23] text-white text-[8px] font-black px-1.5 py-0.5 rounded border border-white/30 tracking-widest">
+                        B&W
+                      </div>
+                    )}
                   </div>
 
                   {/* Label Bottom */}
@@ -308,6 +321,7 @@ export default function SelectFramePage() {
                     )}
                   </div>
                 </div>
+
               ))
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center h-64 gap-4">

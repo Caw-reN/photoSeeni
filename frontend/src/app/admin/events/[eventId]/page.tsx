@@ -150,18 +150,28 @@ export default function EventDetailPage() {
               </div>
             )}
             
-            <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 text-xs font-bold text-slate-600 flex flex-col justify-center">
-              <p className="text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Frame Template Default</p>
-              <p className="text-sm font-black text-[#1D1D23] mt-1">
-                {(event as any).frame_template?.name || 'Tidak ada frame default'}
-              </p>
+            <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 text-xs font-bold text-slate-600 flex flex-col justify-start gap-2">
+              <p className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Frame Template Diizinkan</p>
+              {Array.isArray((event as any).frame_templates) && (event as any).frame_templates.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {(event as any).frame_templates.map((ft: any) => (
+                    <span key={ft.id} className="inline-flex items-center gap-1 text-[10px] font-black bg-violet-100 text-[#8A2BE2] border border-violet-300 px-2 py-0.5 rounded-full">
+                      {ft.is_bw && <span className="bg-[#1D1D23] text-white text-[8px] px-1 rounded tracking-widest">B&W</span>}
+                      {ft.name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm font-black text-slate-400">Semua frame aktif tersedia</p>
+              )}
               {event.expires_at && (
-                <p className="text-[10px] text-red-500 font-bold mt-2">
+                <p className="text-[10px] text-red-500 font-bold mt-1">
                   Event kadaluarsa pada: {new Date(event.expires_at).toLocaleString('id-ID')}
                 </p>
               )}
             </div>
           </div>
+
         </div>
 
         {/* Stats Grid Dashboard */}

@@ -86,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // Admin routes (requires auth + admin role)
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::patch('/frame-templates/{frameTemplate}/toggle-active', [FrameTemplateController::class, 'toggleActive']);
+    Route::patch('/frame-templates/{frameTemplate}/toggle-bw', [FrameTemplateController::class, 'toggleBw']);
 
     // Dashboard stats
     Route::get('/stats', [AdminController::class, 'stats']);
@@ -121,6 +122,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::put('/events/{event}/packages/{package}', [EventPackageController::class, 'update']);
     Route::patch('/events/{event}/packages/{package}', [EventPackageController::class, 'update']);
     Route::delete('/events/{event}/packages/{package}', [EventPackageController::class, 'destroy']);
+
+    // Sync frame templates for event
+    Route::post('/events/{event}/sync-frames', [EventController::class, 'syncFrameTemplates']);
 
     // Event redeem codes (admin)
     Route::get('/events/{event}/redeem-codes', [EventRedeemController::class, 'adminList']);

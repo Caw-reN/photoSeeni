@@ -51,10 +51,11 @@ export default function DownloadPage() {
   const [slotsData, setSlotsData] = useState<SlotData[]>([]);
   const [frameImageUrl, setFrameImageUrl] = useState<string | null>(null);
   const [frameId, setFrameId] = useState<number | null>(null);
+  const [isBw, setIsBw] = useState(false);
   const [canvasDataUrl, setCanvasDataUrl] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [slotOrientations, setSlotOrientations] = useState<Record<number, 'landscape' | 'portrait'>>({});
+  const [slotOrientations, setSlotOrientations] = useState<Record<number, 'landscape' | 'portrait'>>({})
 
   // GIF state
   const [gifLoading, setGifLoading] = useState(false);
@@ -90,18 +91,31 @@ export default function DownloadPage() {
     setGifLoading(true);
     try {
       const imageUrls: string[] = [];
+      let gifW = 640;
+      let gifH = 480;
       
       // Load all raw images and draw on a canvas to produce base64 Data URLs
       for (const photo of photos) {
         if (!photo?.url) continue;
         try {
           const img = await loadImageFromUrl(photo.url);
+          if (imageUrls.length === 0) {
+            // Calculate dimensions from the first image to maintain aspect ratio
+            const ratio = (img.naturalWidth || 640) / (img.naturalHeight || 480);
+            if (ratio > 1) { // Landscape
+              gifW = 600;
+              gifH = Math.round(600 / ratio);
+            } else { // Portrait or square
+              gifH = 600;
+              gifW = Math.round(600 * ratio);
+            }
+          }
           const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || 640;
-          canvas.height = img.naturalHeight || 480;
+          canvas.width = gifW;
+          canvas.height = gifH;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, gifW, gifH);
             imageUrls.push(canvas.toDataURL('image/jpeg', 0.8));
           }
         } catch (loadErr) {
@@ -112,8 +126,8 @@ export default function DownloadPage() {
       if (imageUrls.length > 0 && gifshot) {
         gifshot.createGIF({
           images: imageUrls,
-          gifWidth: 640,
-          gifHeight: 480,
+          gifWidth: gifW,
+          gifHeight: gifH,
           interval: 0.15, // 0.15 seconds per frame (150ms)
           numFrames: imageUrls.length,
           frameDuration: 1.5, // 150ms (in 100ms units)
@@ -169,6 +183,7 @@ export default function DownloadPage() {
 
         const fId = data.frame.id ?? null;
         setFrameId(fId);
+        setIsBw(!!(data.frame.is_bw));
         if (fId) {
           setFrameImageUrl(proxyImageUrl(`${BACKEND_URL}/api/frame-templates/${fId}/image`));
         } else if (data.frame.image_url) {
@@ -284,7 +299,10 @@ export default function DownloadPage() {
         ctx.rotate((data.rotate * Math.PI) / 180);
         ctx.scale(data.scale, data.scale);
         ctx.translate(data.translateX * scaleRatio, data.translateY * scaleRatio);
+        // Apply B&W filter on canvas draw if is_bw is enabled
+        if (isBw) ctx.filter = 'grayscale(1)';
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.filter = 'none';
         ctx.restore();
       }
 
@@ -306,7 +324,7 @@ export default function DownloadPage() {
       objectUrls.forEach(u => URL.revokeObjectURL(u));
       setIsRendering(false);
     }
-  }, [coordinates, slotsData, frameId, loadImageFromUrl, session?.final_image_url]);
+  }, [coordinates, slotsData, frameId, isBw, loadImageFromUrl, session?.final_image_url]);
 
   const handleFrameLoad = useCallback(() => { renderToCanvas(); }, [renderToCanvas]);
 
@@ -493,6 +511,7 @@ export default function DownloadPage() {
                                 : { width: '100%', height: 'auto' }),
                               transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
                               transformOrigin: 'center center',
+                              ...(isBw ? { filter: 'grayscale(1)' } : {}),
                             }}
                             onLoad={(e) => {
                               const img = e.currentTarget;
@@ -501,6 +520,7 @@ export default function DownloadPage() {
                             }}
                           />
                         )}
+
                       </div>
                     );
                   })}

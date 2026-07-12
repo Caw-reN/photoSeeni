@@ -2,8 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { frameTemplatesApi } from '@/lib/api';
-import { Loader2, Trash2, Image as ImageIcon, Eye, EyeOff, User } from 'lucide-react';
+import { Loader2, Trash2, Image as ImageIcon, Eye, EyeOff, User, Circle } from 'lucide-react';
 import { toast } from 'sonner';
+
+const BACKEND_URL = (() => {
+  const u = process.env.NEXT_PUBLIC_API_URL;
+  if (u && !u.startsWith('/')) return u.replace(/\/api\/?$/, '');
+  return '';
+})();
+
+const proxyImageUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  const abs = url.startsWith('http') ? url : `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  return `/api/proxy-image?url=${encodeURIComponent(abs)}`;
+};
 
 export default function AdminFramesPage() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -34,6 +46,17 @@ export default function AdminFramesPage() {
       toast.error(err.message || 'Failed to update status.');
     }
   };
+
+  const handleToggleBw = async (id: number | string) => {
+    try {
+      await frameTemplatesApi.toggleBw(id);
+      toast.success('Filter B&W updated!');
+      loadTemplates();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update B&W filter.');
+    }
+  };
+
   const handleDelete = async (id: number | string) => {
     if (!confirm('Delete this frame template? This cannot be undone.')) return;
     try {
@@ -64,15 +87,23 @@ export default function AdminFramesPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {templates.map((tmpl) => (
             <div key={tmpl.id} className="neobrutal-box bg-white overflow-hidden shadow-[4px_4px_0px_#1D1D23] flex flex-col group hover:shadow-[6px_6px_0px_#1D1D23] transition-all">
+              {/* Thumbnail with B&W preview if is_bw */}
               <div className="aspect-square bg-[repeating-conic-gradient(#f3f4f6_0%_25%,transparent_0%_50%)_0_0/20px_20px] relative overflow-hidden flex items-center justify-center p-3">
                 {tmpl.image_url ? (
                   <img
-                    src={tmpl.image_url}
+                    src={proxyImageUrl(tmpl.image_url)}
                     alt={tmpl.name}
                     className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    style={tmpl.is_bw ? { filter: 'grayscale(1)' } : {}}
                   />
                 ) : (
                   <ImageIcon className="w-10 h-10 text-gray-300" />
+                )}
+                {/* B&W Badge overlay */}
+                {tmpl.is_bw && (
+                  <div className="absolute top-1.5 left-1.5 bg-[#1D1D23] text-white text-[9px] font-black px-1.5 py-0.5 rounded border border-white/30 tracking-widest">
+                    B&W
+                  </div>
                 )}
               </div>
               <div className="p-3 border-t-2 border-[#1D1D23]">
@@ -82,6 +113,13 @@ export default function AdminFramesPage() {
                     {tmpl.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                     {tmpl.is_active ? 'Active' : 'Inactive'}
                   </span>
+                  {tmpl.is_bw && (
+                    <span className="text-xs font-bold bg-[#1D1D23] text-white px-2 py-0.5 rounded-full border border-[#1D1D23] flex items-center gap-1">
+                      <Circle className="w-2.5 h-2.5 fill-white" /> B&W
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 mb-2">
                   {tmpl.user && (
                     <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-[#1D1D23] flex items-center gap-1 truncate max-w-[100px]">
                       <User className="w-3 h-3" />
@@ -95,6 +133,20 @@ export default function AdminFramesPage() {
                   </span>
                   <div className="flex-1" />
 
+                  {/* Toggle B&W */}
+                  <button
+                    onClick={() => handleToggleBw(tmpl.id)}
+                    title={tmpl.is_bw ? 'Nonaktifkan B&W' : 'Aktifkan B&W'}
+                    className={`p-1.5 rounded-full border-2 border-[#1D1D23] transition-colors ${
+                      tmpl.is_bw
+                        ? 'bg-[#1D1D23] text-white hover:bg-gray-700'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Circle className={`w-3.5 h-3.5 ${tmpl.is_bw ? 'fill-white' : ''}`} />
+                  </button>
+
+                  {/* Toggle Active */}
                   <button
                     onClick={() => handleToggleActive(tmpl.id)}
                     title={tmpl.is_active ? "Deactivate" : "Activate"}

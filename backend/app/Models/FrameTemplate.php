@@ -15,11 +15,13 @@ class FrameTemplate extends Model
         'image_path',
         'slots',
         'is_active',
+        'is_bw',
     ];
 
     protected $casts = [
         'slots' => 'array',
         'is_active' => 'boolean',
+        'is_bw' => 'boolean',
     ];
 
     public function user()

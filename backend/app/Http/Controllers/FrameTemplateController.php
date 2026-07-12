@@ -65,6 +65,17 @@ class FrameTemplateController extends Controller
         ]);
     }
 
+    public function toggleBw(FrameTemplate $frameTemplate)
+    {
+        $frameTemplate->is_bw = !$frameTemplate->is_bw;
+        $frameTemplate->save();
+
+        return response()->json([
+            'message' => 'Template B&W status updated.',
+            'data' => $frameTemplate
+        ]);
+    }
+
     /**
      * Display the specified resource.
      */

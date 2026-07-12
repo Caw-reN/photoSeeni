@@ -254,7 +254,7 @@ export default function EditPhotoPage() {
               draggable
               onDragStart={(e) => handleDragStart(e, photo.url)}
               onClick={() => handlePhotoTap(photo.url)}
-              className="relative aspect-[3/4] bg-slate-200 border-4 border-slate-900 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] transition-all"
+              className="relative aspect-[3/4] shrink-0 bg-slate-200 border-4 border-slate-900 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] transition-all"
             >
               <img src={photo.url} alt={`Foto ${index + 1}`} className="w-full h-full object-cover pointer-events-none" />
               <div className="absolute bottom-0 right-0 bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded-tl-lg">

@@ -223,7 +223,7 @@ class EventRedeemController extends Controller
     {
         $request->validate(['code' => 'required|string']);
 
-        $redeemCode = EventRedeemCode::with(['event', 'package', 'photoSession'])
+        $redeemCode = EventRedeemCode::with(['event.frameTemplates', 'event.frameTemplate', 'package', 'photoSession'])
             ->where('code', strtoupper(trim($request->code)))
             ->first();
 
@@ -261,7 +261,10 @@ class EventRedeemController extends Controller
             'redeem_code' => $redeemCode->only(['id', 'code', 'buyer_name', 'buyer_email', 'buyer_phone']),
             'event'       => array_merge(
                 $redeemCode->event->only(['id', 'name', 'slug', 'organizer_name']),
-                ['frame' => $redeemCode->event->frameTemplate]
+                [
+                    'frame'          => $redeemCode->event->frameTemplate,
+                    'frame_templates'=> $redeemCode->event->frameTemplates->values(),
+                ]
             ),
             'package'     => array_merge(
                 $redeemCode->package->only(['id', 'name', 'photo_count', 'description']),

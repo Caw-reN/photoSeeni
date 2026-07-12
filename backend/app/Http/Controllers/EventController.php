@@ -15,7 +15,7 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Event::with(['creator', 'frameTemplate'])
+        $query = Event::with(['creator', 'frameTemplate', 'frameTemplates'])
             ->withCount(['packages', 'redeemCodes', 'photoSessions']);
 
         if ($request->filled('search')) {
@@ -40,7 +40,7 @@ class EventController extends Controller
     {
         $event = Event::with(['packages' => function ($q) {
             $q->where('is_active', true)->orderBy('sort_order')->with('frameTemplate');
-        }, 'frameTemplate'])
+        }, 'frameTemplate', 'frameTemplates'])
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();
@@ -57,7 +57,7 @@ class EventController extends Controller
      */
     public function adminShow(Event $event)
     {
-        return response()->json($event->load(['creator', 'frameTemplate', 'packages']));
+        return response()->json($event->load(['creator', 'frameTemplate', 'frameTemplates', 'packages']));
     }
 
     /**
@@ -66,14 +66,16 @@ class EventController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'organizer_name'    => 'required|string|max:255',
-            'description'       => 'nullable|string',
-            'location'          => 'nullable|string|max:255',
-            'event_date'        => 'nullable|date',
-            'frame_template_id' => 'nullable|exists:frame_templates,id',
-            'is_active'         => 'boolean',
-            'expires_at'        => 'nullable|date',
+            'name'                => 'required|string|max:255',
+            'organizer_name'      => 'required|string|max:255',
+            'description'         => 'nullable|string',
+            'location'            => 'nullable|string|max:255',
+            'event_date'          => 'nullable|date',
+            'frame_template_id'   => 'nullable|exists:frame_templates,id',
+            'frame_template_ids'  => 'nullable|array',
+            'frame_template_ids.*'=> 'exists:frame_templates,id',
+            'is_active'           => 'boolean',
+            'expires_at'          => 'nullable|date',
         ]);
 
         // Auto-generate slug from name, ensure uniqueness
@@ -84,12 +86,20 @@ class EventController extends Controller
             $slug = $baseSlug . '-' . $i++;
         }
 
+        $frameTemplateIds = $validated['frame_template_ids'] ?? [];
+        unset($validated['frame_template_ids']);
+
         $event = Event::create(array_merge($validated, [
             'slug'       => $slug,
             'created_by' => $request->user()->id,
         ]));
 
-        return response()->json($event->load(['creator', 'frameTemplate', 'packages']), 201);
+        // Sync pivot
+        if (!empty($frameTemplateIds)) {
+            $event->frameTemplates()->sync($frameTemplateIds);
+        }
+
+        return response()->json($event->load(['creator', 'frameTemplate', 'frameTemplates', 'packages']), 201);
     }
 
     /**
@@ -98,19 +108,29 @@ class EventController extends Controller
     public function update(Request $request, Event $event)
     {
         $validated = $request->validate([
-            'name'              => 'sometimes|string|max:255',
-            'organizer_name'    => 'sometimes|string|max:255',
-            'description'       => 'nullable|string',
-            'location'          => 'nullable|string|max:255',
-            'event_date'        => 'nullable|date',
-            'frame_template_id' => 'nullable|exists:frame_templates,id',
-            'is_active'         => 'sometimes|boolean',
-            'expires_at'        => 'nullable|date',
+            'name'                => 'sometimes|string|max:255',
+            'organizer_name'      => 'sometimes|string|max:255',
+            'description'         => 'nullable|string',
+            'location'            => 'nullable|string|max:255',
+            'event_date'          => 'nullable|date',
+            'frame_template_id'   => 'nullable|exists:frame_templates,id',
+            'frame_template_ids'  => 'nullable|array',
+            'frame_template_ids.*'=> 'exists:frame_templates,id',
+            'is_active'           => 'sometimes|boolean',
+            'expires_at'          => 'nullable|date',
         ]);
+
+        $frameTemplateIds = $validated['frame_template_ids'] ?? null;
+        unset($validated['frame_template_ids']);
 
         $event->update($validated);
 
-        return response()->json($event->load(['creator', 'frameTemplate', 'packages']));
+        // Sync pivot only when array is explicitly sent
+        if ($frameTemplateIds !== null) {
+            $event->frameTemplates()->sync($frameTemplateIds);
+        }
+
+        return response()->json($event->load(['creator', 'frameTemplate', 'frameTemplates', 'packages']));
     }
 
     /**
@@ -120,6 +140,24 @@ class EventController extends Controller
     {
         $event->delete();
         return response()->json(['message' => 'Event berhasil dihapus.']);
+    }
+
+    /**
+     * Sync frame templates for an event (admin only).
+     */
+    public function syncFrameTemplates(Request $request, Event $event)
+    {
+        $request->validate([
+            'frame_template_ids'   => 'required|array',
+            'frame_template_ids.*' => 'exists:frame_templates,id',
+        ]);
+
+        $event->frameTemplates()->sync($request->frame_template_ids);
+
+        return response()->json([
+            'message'        => 'Frame templates synced successfully.',
+            'frameTemplates' => $event->frameTemplates()->get(),
+        ]);
     }
 
     /**

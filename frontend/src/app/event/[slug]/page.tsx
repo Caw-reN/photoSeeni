@@ -139,6 +139,9 @@ export default function EventPage() {
           maxPhotos: res.package?.photo_count,
           frameId: res.session.frame_id,
           sessionDuration: res.session.session_duration,
+          allowedFrameIds: Array.isArray(res.event?.frame_templates)
+            ? res.event.frame_templates.map((f: any) => f.id)
+            : [],
         }));
       }
       toast.success('Sesi foto dimulai!');
