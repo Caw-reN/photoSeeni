@@ -52,7 +52,8 @@ export default function DownloadPage() {
   const [frameImageUrl, setFrameImageUrl] = useState<string | null>(null);
   const [frameId, setFrameId] = useState<number | null>(null);
   const [isBw, setIsBw] = useState(false);
-  const [canvasDataUrl, setCanvasDataUrl] = useState<string | null>(null);
+  const [canvasDataUrls, setCanvasDataUrls] = useState<(string | null)[]>([]);
+  const [activePrintTab, setActivePrintTab] = useState(0);
   const [isRendering, setIsRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [slotOrientations, setSlotOrientations] = useState<Record<number, 'landscape' | 'portrait'>>({})
@@ -218,34 +219,41 @@ export default function DownloadPage() {
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
 
-  // ── Canvas render — skip if server already has final_image_url (correct with edits) ──
+  // ── Canvas render — skip if server already has final_image_urls ──
   const renderToCanvas = useCallback(async () => {
     if (hasRendered.current) return;
 
-    // If the server already has a final composited image (uploaded by checkout),
-    // use it directly — it already contains the user's edits (rotate, scale, translate)
-    if (session?.final_image_url) {
+    const serverStrips: string[] = session?.final_image_urls ?? (session?.final_image_url ? [session.final_image_url] : []);
+    
+    // If the server already has final composited images (uploaded by checkout),
+    // use them directly — they already contain the user's edits (rotate, scale, translate)
+    if (serverStrips.length > 0) {
       hasRendered.current = true;
       setIsRendering(true);
       try {
-        const response = await fetch(proxyImageUrl(session.final_image_url));
-        if (!response.ok) throw new Error('Gagal mengambil final image dari server');
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        // Convert to data URL for download
-        const img = new Image();
-        await new Promise<void>((res, rej) => {
-          img.onload = () => res();
-          img.onerror = () => rej(new Error('Gagal decode final image'));
-          img.src = objectUrl;
-        });
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(objectUrl);
-        setCanvasDataUrl(canvas.toDataURL('image/jpeg', 0.95));
+        const results = await Promise.all(serverStrips.map(async (stripUrl) => {
+          const response = await fetch(proxyImageUrl(stripUrl));
+          if (!response.ok) throw new Error('Gagal mengambil final image dari server');
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          
+          const img = new Image();
+          await new Promise<void>((res, rej) => {
+            img.onload = () => res();
+            img.onerror = () => rej(new Error('Gagal decode final image'));
+            img.src = objectUrl;
+          });
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(objectUrl);
+          return canvas.toDataURL('image/jpeg', 0.95);
+        }));
+        
+        setCanvasDataUrls(results);
       } catch (err: any) {
         console.error('Final image fetch error:', err);
         // Fallback to re-render below
@@ -314,7 +322,7 @@ export default function DownloadPage() {
       if (frameOverlay.src.startsWith('blob:')) objectUrls.push(frameOverlay.src);
 
       ctx.drawImage(frameOverlay, 0, 0, canvas.width, canvas.height);
-      setCanvasDataUrl(canvas.toDataURL('image/jpeg', 0.95));
+      setCanvasDataUrls([canvas.toDataURL('image/jpeg', 0.95)]);
     } catch (err: any) {
       console.error('Canvas render error:', err);
       setRenderError(err?.message || 'Gagal merender strip. Coba lagi.');
@@ -330,11 +338,11 @@ export default function DownloadPage() {
 
   // ── Download handlers ─────────────────────────────────────────────────────
   const handleDownloadStrip = () => {
-    // Hanya download dari canvas (benar) — jangan fallback ke server image yang salah
-    if (!canvasDataUrl) return;
+    const currentDataUrl = canvasDataUrls[activePrintTab];
+    if (!currentDataUrl) return;
     const a = document.createElement('a');
-    a.href = canvasDataUrl;
-    a.download = `fotoseeni-strip-${session?.id || 'photo'}.jpg`;
+    a.href = currentDataUrl;
+    a.download = `fotoseeni-strip-${activePrintTab + 1}-${session?.id || 'photo'}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -443,7 +451,10 @@ export default function DownloadPage() {
     : [];
 
   const canShowLayered = frameImageUrl && coordinates.length > 0 && slotsData.length > 0 && !session?.final_image_url;
-  const hasStrip = canvasDataUrl || session?.final_image_url;
+  
+  const serverStrips: string[] = session?.final_image_urls ?? (session?.final_image_url ? [session.final_image_url] : []);
+  const hasMultiplePrints = serverStrips.length > 1;
+  const hasStrip = canvasDataUrls.length > 0 || serverStrips.length > 0;
 
   return (
     <div className="min-h-screen bg-[#FFFDF7] py-10 px-4 flex flex-col items-center">
@@ -475,12 +486,30 @@ export default function DownloadPage() {
                 </span>
               </div>
 
+              {hasMultiplePrints && (
+                <div className="flex gap-2 items-center justify-center w-full mb-4">
+                  {serverStrips.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActivePrintTab(idx)}
+                      className={`flex-1 py-2 rounded-xl border-2 border-slate-900 font-black text-[10px] uppercase transition-all shadow-[2px_2px_0px_#1D1D23] ${
+                        activePrintTab === idx
+                          ? 'bg-[#8A2BE2] text-white shadow-none translate-x-[2px] translate-y-[2px]'
+                          : 'bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      Cetakan {idx + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {canShowLayered ? (
                 // Layered rendering: foto di slot + frame overlay (sama seperti checkout & result)
                 <div
                   onClick={() => {
-                    if (canvasDataUrl) setActivePreviewUrl(canvasDataUrl);
-                    else if (session?.final_image_url) setActivePreviewUrl(proxyImageUrl(session.final_image_url));
+                    if (canvasDataUrls[activePrintTab]) setActivePreviewUrl(canvasDataUrls[activePrintTab]);
+                    else if (serverStrips[activePrintTab]) setActivePreviewUrl(proxyImageUrl(serverStrips[activePrintTab]));
                   }}
                   className="relative inline-block overflow-hidden w-full rounded-lg border-2 border-slate-900 cursor-zoom-in"
                 >
@@ -533,12 +562,12 @@ export default function DownloadPage() {
                     className="w-full h-auto block relative z-10 pointer-events-none"
                   />
                 </div>
-              ) : session?.final_image_url ? (
+              ) : serverStrips[activePrintTab] ? (
                 <img
-                  src={proxyImageUrl(session.final_image_url)}
-                  alt="Final Photo Strip"
+                  src={proxyImageUrl(serverStrips[activePrintTab])}
+                  alt={`Final Photo Strip ${activePrintTab + 1}`}
                   onLoad={() => renderToCanvas()}
-                  onClick={() => setActivePreviewUrl(proxyImageUrl(session.final_image_url))}
+                  onClick={() => setActivePreviewUrl(proxyImageUrl(serverStrips[activePrintTab]))}
                   className="w-full h-auto object-contain border-2 border-slate-900 rounded-xl cursor-zoom-in"
                 />
               ) : (
@@ -578,15 +607,15 @@ export default function DownloadPage() {
             </div>
 
             {/* Download strip button */}
-            {(isRendering || canShowLayered || session.final_image_url) && (
+            {(isRendering || canShowLayered || serverStrips.length > 0) && (
               <button
                 onClick={handleDownloadStrip}
-                disabled={isRendering || !canvasDataUrl}
+                disabled={isRendering || !canvasDataUrls[activePrintTab]}
                 className="neobrutal-button mt-5 w-full py-4 bg-[#8A2BE2] text-white hover:bg-[#9b42ef] font-extrabold text-sm border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2.5 uppercase cursor-pointer disabled:opacity-60 disabled:cursor-wait !rounded-xl"
               >
                 {isRendering ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Merender...</>
-                ) : canvasDataUrl ? (
+                ) : canvasDataUrls[activePrintTab] ? (
                   <><Download className="w-4 h-4" /> Unduh</>
                 ) : (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyiapkan...</>

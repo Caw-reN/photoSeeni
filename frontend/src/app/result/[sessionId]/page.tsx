@@ -429,96 +429,125 @@ export default function ResultPage() {
             </div>
           )}
 
-          {/* Active strip preview */}
-          <div className={`neobrutal-box bg-white p-4 shadow-[12px_12px_0px_#1D1D23] ${hasMultiplePrints ? '' : 'transform -rotate-2 hover:rotate-0'} transition-transform duration-300 w-full`}>
-            {canShowLayered ? (() => {
-              const slotsData = slotsDataList[activePrintTab] ?? slotsDataList[0] ?? [];
+          {/* Stacked cards preview */}
+          <div className="relative w-full max-w-[260px] mx-auto mt-4 mb-8">
+            {/* Invisible placeholder to establish container height */}
+            <div className="invisible pointer-events-none neobrutal-box p-4 border-4">
+              <img src={frameImageUrl || serverStrips[0] || session?.final_image_url} alt="" className="w-full h-auto" />
+            </div>
+
+            {/* The actual fanned stacked cards */}
+            {Array.from({ length: totalPrints }).map((_, printIndex) => {
+              const isActive = activePrintTab === printIndex;
+              const diff = printIndex - activePrintTab;
+              const rotation = diff * 7; 
+              const xOffset = diff * 20; 
+              const yOffset = Math.abs(diff) * 8; 
+              const zIndex = isActive ? 20 : 10 - Math.abs(diff);
+
               return (
-                <div className="relative inline-block overflow-hidden w-full">
-                  {coordinates.map((slot, index) => {
-                    const data = slotsData[index];
-                    const oriKey = `${activePrintTab}-${index}`;
+                <div 
+                  key={printIndex}
+                  onClick={() => setActivePrintTab(printIndex)}
+                  className={`absolute top-0 left-0 w-full neobrutal-box bg-white p-4 transition-all duration-500 cursor-pointer ${isActive ? 'shadow-[12px_12px_0px_#1D1D23] border-4' : 'shadow-[4px_4px_0px_rgba(29,29,35,0.4)] border-2 opacity-95 hover:opacity-100 hover:-translate-y-2'}`}
+                  style={{
+                    transform: `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rotation}deg) scale(${isActive ? 1.05 : 0.95})`,
+                    zIndex,
+                    transformOrigin: 'bottom center'
+                  }}
+                >
+                  {canShowLayered ? (() => {
+                    const slotsData = slotsDataList[printIndex] ?? slotsDataList[0] ?? [];
                     return (
-                      <div
-                        key={index}
-                        style={{
-                          position: 'absolute',
-                          left: `${slot.x_percent ?? slot.x ?? 0}%`,
-                          top: `${slot.y_percent ?? slot.y ?? 0}%`,
-                          width: `${slot.width_percent ?? slot.width ?? 0}%`,
-                          height: `${slot.height_percent ?? slot.height ?? 0}%`,
-                        }}
-                        className="overflow-hidden flex items-center justify-center relative bg-slate-200"
-                      >
-                        {data?.photoUrl && (
-                          <img
-                            src={data.photoUrl}
-                            alt={`Photo Slot ${index + 1}`}
-                            className="absolute max-w-none"
-                            style={{
-                              top: '50%',
-                              left: '50%',
-                              ...(slotOrientations[oriKey] === 'landscape'
-                                ? { height: '100%', width: 'auto' }
-                                : { width: '100%', height: 'auto' }),
-                              transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
-                              transformOrigin: 'center center',
-                              filter: isBw ? 'grayscale(100%)' : 'none',
-                            }}
-                            onLoad={(e) => {
-                              const img = e.currentTarget;
-                              const ori = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
-                              setSlotOrientations(prev => ({ ...prev, [oriKey]: ori }));
-                            }}
-                          />
-                        )}
+                      <div className="relative inline-block overflow-hidden w-full">
+                        {coordinates.map((slot, index) => {
+                          const data = slotsData[index];
+                          const oriKey = `${printIndex}-${index}`;
+                          return (
+                            <div
+                              key={index}
+                              style={{
+                                position: 'absolute',
+                                left: `${slot.x_percent ?? slot.x ?? 0}%`,
+                                top: `${slot.y_percent ?? slot.y ?? 0}%`,
+                                width: `${slot.width_percent ?? slot.width ?? 0}%`,
+                                height: `${slot.height_percent ?? slot.height ?? 0}%`,
+                              }}
+                              className="overflow-hidden flex items-center justify-center relative bg-slate-200"
+                            >
+                              {data?.photoUrl && (
+                                <img
+                                  src={data.photoUrl}
+                                  alt={`Photo Slot ${index + 1}`}
+                                  className="absolute max-w-none"
+                                  style={{
+                                    top: '50%',
+                                    left: '50%',
+                                    ...(slotOrientations[oriKey] === 'landscape'
+                                      ? { height: '100%', width: 'auto' }
+                                      : { width: '100%', height: 'auto' }),
+                                    transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
+                                    transformOrigin: 'center center',
+                                    filter: isBw ? 'grayscale(100%)' : 'none',
+                                  }}
+                                  onLoad={(e) => {
+                                    const img = e.currentTarget;
+                                    const ori = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
+                                    setSlotOrientations(prev => ({ ...prev, [oriKey]: ori }));
+                                  }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                        {/* Frame PNG — ref is used by canvas renderer for clientWidth (scaleRatio) */}
+                        <img
+                          ref={isActive ? frameImgRef : undefined}
+                          src={frameImageUrl!}
+                          alt="Frame Overlay"
+                          onLoad={isActive ? handleFrameLoad : undefined}
+                          className="w-full h-auto block relative z-10 pointer-events-none"
+                        />
                       </div>
                     );
-                  })}
-                  {/* Frame PNG — ref is used by canvas renderer for clientWidth (scaleRatio) */}
-                  <img
-                    ref={frameImgRef}
-                    src={frameImageUrl!}
-                    alt="Frame Overlay"
-                    onLoad={handleFrameLoad}
-                    className="w-full h-auto block relative z-10 pointer-events-none"
-                  />
+                  })() : serverStrips.length > 0 ? (
+                    <img
+                      src={serverStrips[printIndex] ?? serverStrips[0]}
+                      alt={`Final Photobooth Strip ${printIndex + 1}`}
+                      className="w-full h-auto object-cover border-2 border-[#1D1D23]"
+                    />
+                  ) : session.final_image_url ? (
+                    <img
+                      src={session.final_image_url}
+                      alt="Final Photobooth Strip"
+                      className="w-full h-auto object-cover border-2 border-[#1D1D23]"
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {[...(session.photos || [])]
+                        .sort((a: any, b: any) => a.slot_index - b.slot_index)
+                        .map((photo: any) => (
+                          <img
+                            key={photo.id}
+                            src={photo.url}
+                            alt="Shot"
+                            className="w-full aspect-[4/3] object-cover border-2 border-[#1D1D23]"
+                          />
+                        ))}
+                    </div>
+                  )}
                 </div>
               );
-            })() : serverStrips.length > 0 ? (
-              <img
-                src={serverStrips[activePrintTab] ?? serverStrips[0]}
-                alt={`Final Photobooth Strip ${activePrintTab + 1}`}
-                className="w-full h-auto object-cover border-2 border-[#1D1D23]"
-              />
-            ) : session.final_image_url ? (
-              <img
-                src={session.final_image_url}
-                alt="Final Photobooth Strip"
-                className="w-full h-auto object-cover border-2 border-[#1D1D23]"
-              />
-            ) : (
-              <div className="flex flex-col gap-2">
-                {[...(session.photos || [])]
-                  .sort((a: any, b: any) => a.slot_index - b.slot_index)
-                  .map((photo: any) => (
-                    <img
-                      key={photo.id}
-                      src={photo.url}
-                      alt="Shot"
-                      className="w-full aspect-[4/3] object-cover border-2 border-[#1D1D23]"
-                    />
-                  ))}
-              </div>
-            )}
+            })}
+          </div>
 
-            {/* Canvas render status badge */}
-            <div className="mt-2 flex justify-center min-h-[16px]">
-              {isRendering && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Merender...
-                </span>
-              )}
+          {/* Canvas render status badge */}
+          <div className="mt-2 flex justify-center min-h-[16px]">
+            {isRendering && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <Loader2 className="w-3 h-3 animate-spin" /> Merender...
+              </span>
+            )}
               {hasAnyRendered && !isRendering && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
                   <CheckCircle2 className="w-3 h-3" /> HD siap
@@ -533,7 +562,6 @@ export default function ResultPage() {
                 </button>
               )}
             </div>
-          </div>
 
           {/* Mini strip thumbnails for multi-print */}
           {hasMultiplePrints && (

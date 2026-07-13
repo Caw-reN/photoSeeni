@@ -35,6 +35,7 @@ type Frame = {
   name: string;
   image_path: string;
   image_url: string;
+  is_bw?: boolean;
   slots?: SlotCoordinate[];
   coordinates?: string | SlotCoordinate[];
 };
@@ -223,8 +224,16 @@ export default function EditPhotoPage() {
   };
 
   const handleProceed = () => {
-    localStorage.setItem('arranged_slots_list', JSON.stringify(slotsDataList));
-    localStorage.setItem('arranged_slots', JSON.stringify(slotsDataList[0] || []));
+    // Auto-fill empty prints with Cetakan 1's data
+    const finalSlotsDataList = slotsDataList.map((slots, i) => {
+      if (i > 0 && slots.every(s => !s.photoUrl)) {
+        return [...slotsDataList[0]];
+      }
+      return slots;
+    });
+
+    localStorage.setItem('arranged_slots_list', JSON.stringify(finalSlotsDataList));
+    localStorage.setItem('arranged_slots', JSON.stringify(finalSlotsDataList[0] || []));
     router.push('/checkout');
   };
 
@@ -287,14 +296,15 @@ export default function EditPhotoPage() {
           <h2 className="text-xl font-black text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">Foto Kamu</h2>
           <p className="text-indigo-100 text-xs font-bold mt-1">Seret ke slot atau klik untuk isi</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-3 grid grid-cols-1 gap-3">
+        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
           {capturedPhotos.map((photo, index) => (
             <div
               key={index}
               draggable
               onDragStart={(e) => handleDragStart(e, photo.url)}
               onClick={() => handlePhotoTap(photo.url)}
-              className="relative aspect-[4/3] shrink-0 bg-slate-200 border-4 border-slate-900 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] transition-all"
+              className="relative w-full shrink-0 bg-slate-200 border-4 border-slate-900 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] transition-all"
+              style={{ height: '140px' }}
             >
               <img src={photo.url} alt={`Foto ${index + 1}`} className="w-full h-full object-cover pointer-events-none" />
               <div className="absolute bottom-0 right-0 bg-slate-900 text-white text-[10px] font-black px-2 py-1 rounded-tl-lg">
@@ -344,8 +354,8 @@ export default function EditPhotoPage() {
             </div>
           )}
         </div>
-        <div className="flex-1 w-full flex items-center justify-center overflow-hidden" onClick={() => setActiveSlotIndex(null)}>
-          <div className="relative inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" onClick={(e) => e.stopPropagation()}>
+        <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden py-2" onClick={() => setActiveSlotIndex(null)}>
+          <div className="relative h-full aspect-auto inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" onClick={(e) => e.stopPropagation()}>
             {coordinates.map((slot, index) => {
               const isActive = activeSlotIndex === index;
               const data = slotsData[index];
@@ -397,7 +407,7 @@ export default function EditPhotoPage() {
             <img
               src={getFrameImageUrl(selectedFrame)}
               alt="Frame Overlay"
-              className="max-h-[65vh] md:max-h-[70vh] w-auto block relative z-10 pointer-events-none rounded-lg"
+              className="h-full w-auto block relative z-10 pointer-events-none rounded-lg"
             />
           </div>
         </div>
@@ -499,10 +509,11 @@ export default function EditPhotoPage() {
           </div>
 
           {/* Frame + Slots Container */}
-          <div
-            className="relative inline-block rounded-2xl overflow-hidden shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-4 border-slate-800"
-            onClick={() => setActiveSlotIndex(null)}
-          >
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center py-4 relative z-10">
+            <div
+              className="relative h-full aspect-auto inline-block rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-4 border-slate-800 bg-white"
+              onClick={() => setActiveSlotIndex(null)}
+            >
             {/* Photo slots — z di bawah frame */}
             {coordinates.map((slot, index) => {
               const isActive = activeSlotIndex === index;
@@ -559,14 +570,15 @@ export default function EditPhotoPage() {
               ref={frameImgRef}
               src={getFrameImageUrl(selectedFrame)}
               alt="Frame Overlay"
-              className="block relative pointer-events-none rounded-xl"
-              style={{ zIndex: 20, maxHeight: '50dvh', width: 'auto' }}
+              className="h-full w-auto block relative pointer-events-none rounded-xl"
+              style={{ zIndex: 20 }}
               onLoad={() => {
                 if (frameImgRef.current) {
                   setFrameImgSize({ w: frameImgRef.current.offsetWidth, h: frameImgRef.current.offsetHeight });
                 }
               }}
             />
+            </div>
           </div>
         </div>
 

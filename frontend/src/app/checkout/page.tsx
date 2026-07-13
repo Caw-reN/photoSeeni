@@ -24,6 +24,7 @@ type Frame = {
   name: string;
   image_path: string;
   image_url: string;
+  is_bw?: boolean;
   slots?: SlotCoordinate[];
   coordinates?: string | SlotCoordinate[];
 };

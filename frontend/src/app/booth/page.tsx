@@ -37,6 +37,7 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
 type Frame = {
   id: number;
   name: string;
+  is_bw?: boolean;
   image_path?: string;
   image_url?: string;
 };
