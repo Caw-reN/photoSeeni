@@ -61,22 +61,15 @@ export default function RedeemPage() {
     
     // Client-side validation of user input details
     const name = userDetails.buyer_name.trim();
-    const email = userDetails.buyer_email.trim();
-    const phone = userDetails.buyer_phone.trim();
 
     if (!name) {
       return toast.error('Nama Lengkap wajib diisi.');
-    }
-    if (!email && !phone) {
-      return toast.error('Mohon isi setidaknya email atau nomor WhatsApp untuk mengirimkan hasil foto.');
     }
 
     setIsStarting(true);
     try {
       const res = await eventsApi.startSession(trimmed, {
         buyer_name: name,
-        buyer_email: email || undefined,
-        buyer_phone: phone || undefined
       });
       // Store session info for booth
       if (typeof window !== 'undefined') {
@@ -181,43 +174,16 @@ export default function RedeemPage() {
                         <p className="text-[10px] font-black uppercase text-gray-400">Informasi Penerima Hasil Foto</p>
                         
                         <div>
-                          <label className="text-[9px] font-black uppercase text-[#1D1D23] mb-1 block">Nama Lengkap *</label>
+                          <label className="text-[10px] font-black uppercase text-[#1D1D23] mb-1.5 block">Nama Lengkap *</label>
                           <input
                             type="text"
                             value={userDetails.buyer_name}
                             onChange={e => setUserDetails(p => ({ ...p, buyer_name: e.target.value }))}
                             placeholder="Nama panggilan / lengkap Anda"
-                            className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-[#8A2BE2]"
+                            className="w-full border-2 border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold focus:outline-none focus:border-[#8A2BE2] transition-colors"
                             required
                           />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[9px] font-black uppercase text-[#1D1D23] mb-1 block">WhatsApp (No. WA) *</label>
-                            <input
-                              type="text"
-                              value={userDetails.buyer_phone}
-                              onChange={e => setUserDetails(p => ({ ...p, buyer_phone: e.target.value }))}
-                              placeholder="08123456789"
-                              className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-[#8A2BE2]"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[9px] font-black uppercase text-[#1D1D23] mb-1 block">Alamat Email *</label>
-                            <input
-                              type="email"
-                              value={userDetails.buyer_email}
-                              onChange={e => setUserDetails(p => ({ ...p, buyer_email: e.target.value }))}
-                              placeholder="nama@email.com"
-                              className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-[#8A2BE2]"
-                            />
-                          </div>
-                        </div>
-
-                        <p className="text-[8.5px] text-gray-400 font-bold leading-tight mt-1">
-                          * Tautan hasil foto akan dikirim otomatis. Wajib mengisi Nama & minimal salah satu kontak (WhatsApp / Email).
-                        </p>
                       </div>
                     </div>
                     
