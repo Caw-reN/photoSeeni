@@ -383,7 +383,8 @@ export default function EditPhotoPage() {
           )}
         </div>
         <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden py-2" onClick={() => setActiveSlotIndex(null)}>
-          <div className="relative h-full aspect-auto inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" style={{ containerType: 'inline-size' }} onClick={(e) => e.stopPropagation()}>
+          <div className="relative h-full aspect-auto inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
             {coordinates.map((slot, index) => {
               const isActive = activeSlotIndex === index;
               const data = slotsData[index];
@@ -401,7 +402,7 @@ export default function EditPhotoPage() {
                     height: `${slot.height_percent ?? slot.height ?? 0}%`,
                     zIndex: slot.type === 'text' ? (isActive ? 30 : 20) : (isActive ? 15 : 5),
                   }}
-                  className={`overflow-hidden flex items-center justify-center relative transition-all cursor-pointer ${
+                  className={`overflow-hidden flex items-center justify-center relative transition-all cursor-pointer pointer-events-auto ${
                     slot.type === 'text' ? 'bg-transparent' : 'bg-slate-200'
                   } ${isActive ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'hover:ring-2 hover:ring-indigo-300'}`}
                 >
@@ -448,6 +449,7 @@ export default function EditPhotoPage() {
                 </div>
               );
             })}
+            </div>
             <img
               src={getFrameImageUrl(selectedFrame)}
               alt="Frame Overlay"
@@ -603,9 +605,9 @@ export default function EditPhotoPage() {
           <div className="flex-1 min-h-0 w-full flex items-center justify-center py-4 relative z-10">
             <div
               className="relative h-full aspect-auto inline-block rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-4 border-slate-800 bg-white"
-              style={{ containerType: 'inline-size' }}
               onClick={() => setActiveSlotIndex(null)}
             >
+            <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
             {/* Photo slots — z di bawah frame */}
             {coordinates.map((slot, index) => {
               const isActive = activeSlotIndex === index;
@@ -624,7 +626,7 @@ export default function EditPhotoPage() {
                     height: `${slot.height_percent ?? slot.height ?? 0}%`,
                     zIndex: slot.type === 'text' ? (isActive ? 30 : 25) : (isActive ? 15 : 5),
                   }}
-                  className={`overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
+                  className={`overflow-hidden flex items-center justify-center cursor-pointer pointer-events-auto transition-all ${
                     slot.type === 'text' ? 'bg-transparent' : 'bg-slate-300'
                   } ${isActive ? `ring-4 ring-offset-1 ${slot.type === 'text' ? 'ring-violet-400' : 'ring-amber-400'}` : ''}`}
                 >
@@ -673,6 +675,7 @@ export default function EditPhotoPage() {
             })}
 
             {/* Frame image — z di atas slot, pointer-events-none */}
+            </div>
             <img
               ref={frameImgRef}
               src={getFrameImageUrl(selectedFrame)}
