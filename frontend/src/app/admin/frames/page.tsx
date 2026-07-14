@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { frameTemplatesApi } from '@/lib/api';
-import { Loader2, Trash2, Image as ImageIcon, Eye, EyeOff, User, Circle } from 'lucide-react';
+import { Loader2, Trash2, Image as ImageIcon, Eye, EyeOff, User, Circle, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 const BACKEND_URL = (() => {
   const u = process.env.NEXT_PUBLIC_API_URL;
@@ -145,6 +146,15 @@ export default function AdminFramesPage() {
                   >
                     <Circle className={`w-3.5 h-3.5 ${tmpl.is_bw ? 'fill-white' : ''}`} />
                   </button>
+
+                  {/* Edit Template */}
+                  <Link
+                    href={`/admin/frames/${tmpl.id}/edit`}
+                    title="Edit Template"
+                    className="p-1.5 rounded-full border-2 border-[#1D1D23] bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </Link>
 
                   {/* Toggle Active */}
                   <button

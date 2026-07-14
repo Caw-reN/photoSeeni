@@ -33,20 +33,39 @@ type DragState = {
 
 interface FrameBuilderProps {
   redirectUrl: string;
+  initialFrame?: any;
+  mode?: 'create' | 'edit';
 }
 
-export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
+export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create' }: FrameBuilderProps) {
   const router = useRouter();
   
-  const [frameName, setFrameName] = useState('');
+  const [frameName, setFrameName] = useState(initialFrame?.name || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialFrame?.image_url || null);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+
+  useEffect(() => {
+    if (initialFrame && initialFrame.slots) {
+      setSlots(initialFrame.slots.map((s: any) => ({
+        id: Math.random().toString(36).substring(2, 9),
+        x: s.x_percent,
+        y: s.y_percent,
+        width: s.width_percent,
+        height: s.height_percent,
+        type: s.type || 'photo',
+        fontFamily: s.fontFamily,
+        color: s.color,
+        fontSize: s.fontSize,
+        maxChars: s.maxChars,
+      })));
+    }
+  }, [initialFrame]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -160,7 +179,7 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
   };
 
   const handleSave = async () => {
-    if (!imageFile) {
+    if (!imagePreview) {
       toast.error('Please upload a frame image! 🖼️');
       return;
     }
@@ -169,7 +188,13 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
     try {
       const formData = new FormData();
       formData.append('name', frameName);
-      formData.append('image', imageFile);
+      if (imageFile) {
+        formData.append('image', imageFile);
+      } else if (mode === 'create') {
+        toast.error('Image file is required for new frame!');
+        setIsSubmitting(false);
+        return;
+      }
 
       const slotsData = slots.map((s, index) => ({
         order: index + 1,
@@ -197,9 +222,14 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
         }
       });
 
-      await frameTemplatesApi.create(formData);
+      if (mode === 'edit' && initialFrame) {
+        await frameTemplatesApi.update(initialFrame.id, formData);
+        toast.success('Frame template updated successfully! 🎉');
+      } else {
+        await frameTemplatesApi.create(formData);
+        toast.success('Frame template created successfully! 🎉');
+      }
       
-      toast.success('Frame template saved successfully! 🎉');
       router.push(redirectUrl);
     } catch (error: any) {
       toast.error(error.message || 'Failed to save template 😢. Please try again.');
@@ -411,7 +441,7 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
             className="neobrutal-button w-full py-4 bg-[#FF7F50] text-[#1D1D23] font-black uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Save className="w-4 h-4" />
-            {isSubmitting ? 'Saving...' : 'Save Template'}
+            {isSubmitting ? 'Saving...' : mode === 'edit' ? 'Update Template' : 'Save Template'}
           </button>
         </div>
 
