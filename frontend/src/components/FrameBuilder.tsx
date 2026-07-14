@@ -37,12 +37,26 @@ interface FrameBuilderProps {
   mode?: 'create' | 'edit';
 }
 
+const BACKEND_URL = (() => {
+  if (typeof process === 'undefined') return '';
+  const u = process.env.NEXT_PUBLIC_API_URL;
+  if (u && !u.startsWith('/')) return u.replace(/\/api\/?$/, '');
+  return '';
+})();
+
+const proxyImageUrl = (url: string | undefined): string | null => {
+  if (!url) return null;
+  if (url.startsWith('blob:')) return url;
+  const abs = url.startsWith('http') ? url : `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  return `/api/proxy-image?url=${encodeURIComponent(abs)}`;
+};
+
 export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create' }: FrameBuilderProps) {
   const router = useRouter();
   
   const [frameName, setFrameName] = useState(initialFrame?.name || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(initialFrame?.image_url || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(proxyImageUrl(initialFrame?.image_url));
   const [slots, setSlots] = useState<Slot[]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
