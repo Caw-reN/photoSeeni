@@ -67,6 +67,10 @@ export default function DownloadPage() {
   // GIF state
   const [gifLoading, setGifLoading] = useState(false);
   const [gifDataUrl, setGifDataUrl] = useState<string | null>(null);
+
+  // Framed GIF state
+  const [framedGifLoading, setFramedGifLoading] = useState(false);
+  const [framedGifDataUrl, setFramedGifDataUrl] = useState<string | null>(null);
   
   // Lightbox preview modal state
   const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
@@ -156,6 +160,85 @@ export default function DownloadPage() {
     }
   }, [loadImageFromUrl]);
 
+  // ── Framed GIF Generator ──
+  const generateFramedGif = useCallback(async (photos: any[], frameSrc: string, slot: any, bw: boolean) => {
+    if (!photos || photos.length === 0 || !frameSrc || !slot) return;
+    setFramedGifLoading(true);
+    try {
+      const imageUrls: string[] = [];
+      const frameImg = await loadImageFromUrl(frameSrc);
+      
+      const ratio = (frameImg.naturalWidth || 600) / (frameImg.naturalHeight || 800);
+      let gifW = 600;
+      let gifH = Math.round(600 / ratio);
+      if (ratio < 1 && gifH > 800) {
+        gifH = 800;
+        gifW = Math.round(800 * ratio);
+      }
+
+      const slotX = (slot.x_percent ?? slot.x ?? 0) / 100 * gifW;
+      const slotY = (slot.y_percent ?? slot.y ?? 0) / 100 * gifH;
+      const slotW = (slot.width_percent ?? slot.width ?? 100) / 100 * gifW;
+      const slotH = (slot.height_percent ?? slot.height ?? 100) / 100 * gifH;
+
+      for (const photo of photos) {
+        if (!photo?.url) continue;
+        try {
+          const img = await loadImageFromUrl(photo.url);
+          const canvas = document.createElement('canvas');
+          canvas.width = gifW;
+          canvas.height = gifH;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, gifW, gifH);
+            
+            const imgRatio = img.naturalWidth / img.naturalHeight;
+            const slotRatio = slotW / slotH;
+            let drawW = slotW, drawH = slotH, drawX = slotX, drawY = slotY;
+            if (imgRatio > slotRatio) {
+              drawW = slotH * imgRatio;
+              drawX = slotX - (drawW - slotW) / 2;
+            } else {
+              drawH = slotW / imgRatio;
+              drawY = slotY - (drawH - slotH) / 2;
+            }
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(slotX, slotY, slotW, slotH);
+            ctx.clip();
+            if (bw) ctx.filter = 'grayscale(100%)';
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            ctx.restore();
+            
+            ctx.drawImage(frameImg, 0, 0, gifW, gifH);
+            imageUrls.push(canvas.toDataURL('image/jpeg', 0.8));
+          }
+        } catch (e) { console.error('Error drawing photo for framed gif', e); }
+      }
+
+      if (imageUrls.length > 0 && gifshot) {
+        gifshot.createGIF({
+          images: imageUrls,
+          gifWidth: gifW,
+          gifHeight: gifH,
+          interval: 0.15,
+          numFrames: imageUrls.length,
+          frameDuration: 1.5,
+        }, (obj: any) => {
+          if (!obj.error) setFramedGifDataUrl(obj.image);
+          setFramedGifLoading(false);
+        });
+      } else {
+        setFramedGifLoading(false);
+      }
+    } catch (err) {
+      console.error('Framed GIF error', err);
+      setFramedGifLoading(false);
+    }
+  }, [loadImageFromUrl]);
+
   const handleDownloadGif = () => {
     if (!gifDataUrl) return;
     const a = document.createElement('a');
@@ -191,13 +274,15 @@ export default function DownloadPage() {
         const fId = data.frame.id ?? null;
         setFrameId(fId);
         setIsBw(!!(data.frame.is_bw));
+        let frameImgSrc = '';
         if (fId) {
-          setFrameImageUrl(proxyImageUrl(`${BACKEND_URL}/api/frame-templates/${fId}/image`));
+          frameImgSrc = proxyImageUrl(`${BACKEND_URL}/api/frame-templates/${fId}/image`);
         } else if (data.frame.image_url) {
-          setFrameImageUrl(proxyImageUrl(data.frame.image_url));
+          frameImgSrc = proxyImageUrl(data.frame.image_url);
         } else {
-          setFrameImageUrl(proxyImageUrl(getImageUrl(data.frame.image_path)));
+          frameImgSrc = proxyImageUrl(getImageUrl(data.frame.image_path));
         }
+        setFrameImageUrl(frameImgSrc);
 
         // Sort photos by slot_index
         const sorted: any[] = data.photos
@@ -214,6 +299,11 @@ export default function DownloadPage() {
         // Trigger GIF generation
         if (sorted.length > 0) {
           generateGif(sorted);
+          
+          const photoSlots = coords.filter((c: any) => c.type !== 'text');
+          if (photoSlots.length === 1 && frameImgSrc) {
+            generateFramedGif(sorted, frameImgSrc, photoSlots[0], !!data.frame.is_bw);
+          }
         }
       }
     } catch (_) {
@@ -649,7 +739,7 @@ export default function DownloadPage() {
                 {isRendering ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Merender...</>
                 ) : canvasDataUrls[activePrintTab] ? (
-                  <><Download className="w-4 h-4" /> Unduh</>
+                  <><Download className="w-4 h-4" /> Unduh Strip Foto</>
                 ) : (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Menyiapkan...</>
                 )}
@@ -659,9 +749,59 @@ export default function DownloadPage() {
         </div>
 
         {/* ══════════════════════════════════════════════
-            KOLOM KANAN — GIF Animasi Poses
+            KOLOM KANAN — Hasil Animasi (GIFs)
             ══════════════════════════════════════════════ */}
         <div className="w-full lg:w-[360px] flex-shrink-0 flex flex-col gap-6">
+
+          {/* ── Framed GIF Box (Hanya jika frame memiliki 1 slot foto) ── */}
+          {(framedGifLoading || framedGifDataUrl) && (
+            <div className="neobrutal-box bg-white p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full flex flex-col justify-between">
+              <div>
+                <div className="text-center mb-4">
+                  <span className="bg-[#10b981] text-white font-black text-[10px] px-3.5 py-1.5 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] uppercase tracking-wider">
+                    GIF Animasi Frame
+                  </span>
+                </div>
+                
+                {framedGifLoading ? (
+                  <div className="aspect-[3/4] w-full bg-slate-50 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
+                    <Loader2 className="w-8 h-8 text-[#8A2BE2] animate-spin mb-2" />
+                    <p className="text-slate-400 text-xs font-bold uppercase">Membuat Animasi GIF...</p>
+                  </div>
+                ) : framedGifDataUrl ? (
+                  <div
+                    onClick={() => setActivePreviewUrl(framedGifDataUrl)}
+                    className="w-full bg-slate-100 border-2 border-slate-900 rounded-xl overflow-hidden relative shadow-inner cursor-zoom-in"
+                  >
+                    <img
+                      src={framedGifDataUrl}
+                      alt="Animasi Frame"
+                      className="w-full h-auto max-h-[400px] object-contain"
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              {framedGifDataUrl && (
+                <div className="mt-5 text-center">
+                  <p className="text-[9px] font-black uppercase text-slate-400 mb-3 tracking-widest border-t-2 border-slate-100 pt-3">
+                    *BERISI SEMUA FOTO YANG DIANIMASIKAN DI DALAM FRAME
+                  </p>
+                  <button
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = framedGifDataUrl;
+                      a.download = `snaptime_framed_gif_${sessionId}.gif`;
+                      a.click();
+                    }}
+                    className="neobrutal-button w-full py-3.5 bg-[#10b981] text-white hover:bg-[#059669] font-black text-xs border-3 border-slate-900 shadow-[3px_3px_0px_#1D1D23] flex items-center justify-center gap-2 uppercase tracking-wider !rounded-xl transition-all active:translate-y-1 active:shadow-none"
+                  >
+                    <Download className="w-4 h-4" /> Unduh GIF Frame
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           
           {/* ── GIF Animasi Box (Vintage Monitor Style) ── */}
           <div className="neobrutal-box bg-white p-5 border-4 border-slate-900 rounded-2xl shadow-[6px_6px_0px_#1D1D23] w-full flex flex-col justify-between">
