@@ -12,6 +12,11 @@ type Slot = {
   y: number;
   width: number;
   height: number;
+  type?: 'photo' | 'text';
+  fontFamily?: string;
+  color?: string;
+  fontSize?: number;
+  maxChars?: number;
 };
 
 type DragState = {
@@ -53,13 +58,15 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
     }
   };
 
-  const handleAddSlot = () => {
+  const handleAddSlot = (type: 'photo' | 'text' = 'photo') => {
     const newSlot: Slot = {
       id: Math.random().toString(36).substring(2, 9),
       x: 10,
       y: 10,
-      width: 25,
-      height: 35,
+      width: type === 'text' ? 50 : 25,
+      height: type === 'text' ? 10 : 35,
+      type,
+      ...(type === 'text' ? { fontFamily: 'Inter', color: '#000000', fontSize: 16, maxChars: 50 } : {}),
     };
     setSlots([...slots, newSlot]);
     setActiveSlotId(newSlot.id);
@@ -178,6 +185,16 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
         formData.append(`slots[${index}][y_percent]`, slot.y_percent.toString());
         formData.append(`slots[${index}][width_percent]`, slot.width_percent.toString());
         formData.append(`slots[${index}][height_percent]`, slot.height_percent.toString());
+        const originalSlot = slots[index];
+        if (originalSlot.type === 'text') {
+          formData.append(`slots[${index}][type]`, 'text');
+          if (originalSlot.fontFamily) formData.append(`slots[${index}][fontFamily]`, originalSlot.fontFamily);
+          if (originalSlot.color) formData.append(`slots[${index}][color]`, originalSlot.color);
+          if (originalSlot.fontSize) formData.append(`slots[${index}][fontSize]`, originalSlot.fontSize.toString());
+          if (originalSlot.maxChars) formData.append(`slots[${index}][maxChars]`, originalSlot.maxChars.toString());
+        } else {
+          formData.append(`slots[${index}][type]`, 'photo');
+        }
       });
 
       await frameTemplatesApi.create(formData);
@@ -250,15 +267,26 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-extrabold text-[#1D1D23] uppercase text-sm">
-                Photo Slots ({slots.length})
+                Slots ({slots.length})
               </h3>
-              <button
-                onClick={handleAddSlot}
-                disabled={!imagePreview}
-                className="p-1.5 bg-[#8A2BE2] text-white rounded-lg border-2 border-[#1D1D23] shadow-[2px_2px_0px_#1D1D23] hover:translate-y-px hover:shadow-[1px_1px_0px_#1D1D23] disabled:opacity-50 transition-all"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleAddSlot('photo')}
+                  disabled={!imagePreview}
+                  title="Add Photo Slot"
+                  className="p-1.5 bg-[#8A2BE2] text-white rounded-lg border-2 border-[#1D1D23] shadow-[2px_2px_0px_#1D1D23] hover:translate-y-px hover:shadow-[1px_1px_0px_#1D1D23] disabled:opacity-50 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleAddSlot('text')}
+                  disabled={!imagePreview}
+                  title="Add Text Slot"
+                  className="p-1.5 bg-[#FF7F50] text-[#1D1D23] rounded-lg border-2 border-[#1D1D23] shadow-[2px_2px_0px_#1D1D23] hover:translate-y-px hover:shadow-[1px_1px_0px_#1D1D23] disabled:opacity-50 transition-all font-black text-xs px-2"
+                >
+                  T
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
@@ -276,7 +304,7 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
                   }`}
                 >
                   <span className="font-black text-sm text-[#1D1D23]">
-                    Slot {i + 1}
+                    {slot.type === 'text' ? 'T' : 'Slot'} {i + 1}
                   </span>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] text-gray-500 font-bold">
@@ -296,6 +324,86 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
               ))}
             </div>
           </div>
+
+          {/* Text Slot Configuration (if active slot is text) */}
+          {slots.find((s) => s.id === activeSlotId)?.type === 'text' && (
+            <div className="mb-6 p-4 border-2 border-[#1D1D23] rounded-xl bg-[#FFFDF7] shadow-[2px_2px_0px_#1D1D23]">
+              <h4 className="font-extrabold text-[#1D1D23] uppercase text-xs mb-3">Text Settings</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-600 mb-1 uppercase">Font Family</label>
+                  <select
+                    value={slots.find((s) => s.id === activeSlotId)?.fontFamily || 'Inter'}
+                    onChange={(e) => {
+                      setSlots(slots.map(s => s.id === activeSlotId ? { ...s, fontFamily: e.target.value } : s));
+                    }}
+                    className="w-full border-2 border-[#1D1D23] rounded-md p-1.5 text-xs focus:ring-2 focus:ring-[#8A2BE2]"
+                  >
+                    <option value="Inter">Inter</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Comic Sans MS">Comic Sans MS</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-600 mb-1 uppercase">Text Color</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={slots.find((s) => s.id === activeSlotId)?.color || '#000000'}
+                      onChange={(e) => {
+                        setSlots(slots.map(s => s.id === activeSlotId ? { ...s, color: e.target.value } : s));
+                      }}
+                      className="w-8 h-8 rounded border-2 border-[#1D1D23] p-0 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={slots.find((s) => s.id === activeSlotId)?.color || '#000000'}
+                      onChange={(e) => {
+                        setSlots(slots.map(s => s.id === activeSlotId ? { ...s, color: e.target.value } : s));
+                      }}
+                      className="flex-1 border-2 border-[#1D1D23] rounded-md p-1.5 text-xs font-mono uppercase focus:ring-2 focus:ring-[#8A2BE2]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-600 mb-1 uppercase">Font Size (px)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="8"
+                      max="72"
+                      step="1"
+                      value={slots.find((s) => s.id === activeSlotId)?.fontSize || 16}
+                      onChange={(e) => {
+                        setSlots(slots.map(s => s.id === activeSlotId ? { ...s, fontSize: Number(e.target.value) } : s));
+                      }}
+                      className="flex-1 accent-[#8A2BE2]"
+                    />
+                    <span className="text-xs font-black text-[#1D1D23] w-8 text-right">
+                      {slots.find((s) => s.id === activeSlotId)?.fontSize || 16}px
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-600 mb-1 uppercase">Max Characters</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={slots.find((s) => s.id === activeSlotId)?.maxChars || 50}
+                    onChange={(e) => {
+                      setSlots(slots.map(s => s.id === activeSlotId ? { ...s, maxChars: Number(e.target.value) } : s));
+                    }}
+                    className="w-full border-2 border-[#1D1D23] rounded-md p-1.5 text-xs focus:ring-2 focus:ring-[#8A2BE2]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Batas karakter teks yang bisa diinput user (1–500)</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleSave}
@@ -325,6 +433,7 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
                 maxHeight: '65vh',
                 display: 'inline-block',
                 touchAction: 'none',
+                containerType: 'inline-size',
               }}
             >
               <img
@@ -351,14 +460,27 @@ export default function FrameBuilder({ redirectUrl }: FrameBuilderProps) {
                         : 'border-blue-500 bg-blue-500/10 z-10 hover:border-blue-400'
                     }`}
                   >
-                    <span
-                      className={`font-black text-sm select-none ${
-                        isActive ? 'text-[#FF7F50]' : 'text-blue-600'
-                      }`}
-                      style={{ textShadow: '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff' }}
-                    >
-                      SLOT {index + 1}
-                    </span>
+                    {slot.type === 'text' ? (
+                      <div
+                        className="w-full h-full flex items-center justify-center overflow-hidden p-1"
+                        style={{
+                          fontFamily: slot.fontFamily || 'Inter',
+                          color: slot.color || '#000000',
+                          fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
+                        }}
+                      >
+                        <span className="truncate w-full text-center font-bold">Custom Text</span>
+                      </div>
+                    ) : (
+                      <span
+                        className={`font-black text-sm select-none ${
+                          isActive ? 'text-[#FF7F50]' : 'text-blue-600'
+                        }`}
+                        style={{ textShadow: '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff' }}
+                      >
+                        SLOT {index + 1}
+                      </span>
+                    )}
 
                     {isActive && (
                       <>

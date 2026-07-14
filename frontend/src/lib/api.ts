@@ -115,7 +115,7 @@ export const framesApi = {
 
 // Frame Templates API
 export const frameTemplatesApi = {
-  list: () => apiRequest('/frame-templates'),
+  list: () => apiRequest('/frame-templates', { cache: 'no-store' }),
   
   get: (id: number | string) => apiRequest(`/frame-templates/${id}`),
 

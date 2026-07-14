@@ -33,10 +33,16 @@ const proxyImageUrl = (url: string): string => {
 type SlotCoordinate = {
   x?: number; y?: number; width?: number; height?: number;
   x_percent?: number; y_percent?: number; width_percent?: number; height_percent?: number;
+  type?: 'photo' | 'text';
+  fontFamily?: string;
+  color?: string;
+  fontSize?: number;
+  maxChars?: number;
 };
 
 type SlotData = {
   photoUrl: string; scale: number; rotate: number; translateX: number; translateY: number;
+  textValue?: string;
 };
 
 export default function DownloadPage() {
@@ -286,7 +292,7 @@ export default function DownloadPage() {
       for (let i = 0; i < coordinates.length; i++) {
         const slot = coordinates[i];
         const data = slotsData[i];
-        if (!data?.photoUrl) continue;
+        if (!data || slot.type === 'text' || !data.photoUrl) continue;
 
         const img = await loadImageFromUrl(data.photoUrl);
         if (img.src.startsWith('blob:')) objectUrls.push(img.src);
@@ -322,6 +328,33 @@ export default function DownloadPage() {
       if (frameOverlay.src.startsWith('blob:')) objectUrls.push(frameOverlay.src);
 
       ctx.drawImage(frameOverlay, 0, 0, canvas.width, canvas.height);
+      
+      // Draw text slots on top of everything
+      for (let i = 0; i < coordinates.length; i++) {
+        const slot = coordinates[i];
+        const data = slotsData[i];
+        if (slot.type !== 'text' || !data || !data.textValue) continue;
+
+        const x = ((slot.x_percent ?? slot.x ?? 0) / 100) * canvas.width;
+        const y = ((slot.y_percent ?? slot.y ?? 0) / 100) * canvas.height;
+        const w = ((slot.width_percent ?? slot.width ?? 0) / 100) * canvas.width;
+        const h = ((slot.height_percent ?? slot.height ?? 0) / 100) * canvas.height;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+        
+        const fontSize = Math.min(h * 0.8, w * 0.2); 
+        ctx.font = `bold ${fontSize}px ${slot.fontFamily || 'Inter'}`;
+        ctx.fillStyle = slot.color || '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.fillText(data.textValue, x + w / 2, y + h / 2);
+        ctx.restore();
+      }
+
       setCanvasDataUrls([canvas.toDataURL('image/jpeg', 0.95)]);
     } catch (err: any) {
       console.error('Canvas render error:', err);

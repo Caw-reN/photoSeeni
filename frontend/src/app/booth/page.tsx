@@ -17,7 +17,7 @@ import {
   Settings,
   Zap,
 } from 'lucide-react';
-import { framesApi, sessionsApi } from '@/lib/api';
+import { framesApi, sessionsApi, frameTemplatesApi } from '@/lib/api';
 import { AnimatePresence, motion, useDragControls } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -269,6 +269,34 @@ function BoothContent() {
                 setSessionTimeRemaining(info.sessionDuration);
               }
             }
+
+            // Fetch and set the selected frame for Event Mode
+            if (info.frameId) {
+              try {
+                const frameData = await frameTemplatesApi.get(info.frameId);
+                if (frameData) {
+                  localStorage.setItem('selected_frame', JSON.stringify(frameData));
+                  setSelectedFrame(frameData);
+                  
+                  let coords: any[] = [];
+                  if (frameData.coordinates) {
+                    coords = typeof frameData.coordinates === 'string' ? JSON.parse(frameData.coordinates) : frameData.coordinates;
+                  } else if (frameData.slots) {
+                    coords = frameData.slots;
+                  }
+                  coords = Array.isArray(coords) ? coords : [];
+                  
+                  const photoSlotsCount = coords.filter((c: any) => c.type !== 'text').length;
+                  if (photoSlotsCount > 0) {
+                    setTotalSlots(photoSlotsCount);
+                  } else if (coords.length > 0) {
+                    setTotalSlots(coords.length);
+                  }
+                }
+              } catch (e) {
+                console.error('Failed to fetch event frame', e);
+              }
+            }
           }
 
           // Clear any old photos
@@ -287,6 +315,24 @@ function BoothContent() {
           const parsed = JSON.parse(storedFrame);
           setSelectedFrame(parsed);
           frameId = parsed?.id;
+          let coords: any[] = [];
+          try {
+            if (parsed.coordinates) {
+               coords = typeof parsed.coordinates === 'string' ? JSON.parse(parsed.coordinates) : parsed.coordinates;
+            } else if (parsed.slots) {
+               coords = parsed.slots;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+          coords = Array.isArray(coords) ? coords : [];
+          
+          const photoSlotsCount = coords.filter((c: any) => c.type !== 'text').length;
+          if (photoSlotsCount > 0) {
+            setTotalSlots(photoSlotsCount);
+          } else if (coords.length > 0) {
+            setTotalSlots(coords.length);
+          }
         }
         const session = await sessionsApi.create(frameId);
         setSessionId(session.id);

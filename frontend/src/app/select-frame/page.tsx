@@ -115,6 +115,7 @@ export default function SelectFramePage() {
         const res = await fetch(`${apiUrl}/frame-templates`, {
           method: 'GET',
           mode: 'cors',
+          cache: 'no-store',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -224,6 +225,8 @@ export default function SelectFramePage() {
     setIsNavigating(true);
     try {
       localStorage.setItem('selected_frame', JSON.stringify(selectedFrame));
+      localStorage.removeItem('arranged_slots_list');
+      localStorage.removeItem('arranged_slots');
       router.push('/edit-photo');
     } catch (err) {
       console.error(err);

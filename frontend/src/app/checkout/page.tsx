@@ -17,6 +17,11 @@ type SlotCoordinate = {
   width_percent?: number;
   height_percent?: number;
   order?: number;
+  type?: 'photo' | 'text';
+  fontFamily?: string;
+  color?: string;
+  fontSize?: number;
+  maxChars?: number;
 };
 
 type Frame = {
@@ -35,6 +40,7 @@ type SlotData = {
   rotate: number;
   translateX: number;
   translateY: number;
+  textValue?: string;
 };
 
 const BACKEND_URL = (() => {
@@ -412,7 +418,7 @@ export default function CheckoutPage() {
         for (let i = 0; i < coordinates.length; i++) {
           const slot = coordinates[i];
           const data = slotsData[i];
-          if (!data || !data.photoUrl) continue;
+          if (!data || slot.type === 'text' || !data.photoUrl) continue;
 
           // For captured photos, they might already be blob URLs or base64. 
           // If they are local data URIs or blob URLs, we can just use them, 
@@ -457,6 +463,51 @@ export default function CheckoutPage() {
         if (frameImage.src.startsWith('blob:')) objectUrls.push(frameImage.src);
 
         ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+
+        // Draw text slots on top of everything
+        for (let i = 0; i < coordinates.length; i++) {
+          const slot = coordinates[i];
+          const data = slotsData[i];
+          if (slot.type !== 'text' || !data || !data.textValue) continue;
+
+          const x = ((slot.x_percent ?? slot.x ?? 0) / 100) * canvas.width;
+          const y = ((slot.y_percent ?? slot.y ?? 0) / 100) * canvas.height;
+          const w = ((slot.width_percent ?? slot.width ?? 0) / 100) * canvas.width;
+          const h = ((slot.height_percent ?? slot.height ?? 0) / 100) * canvas.height;
+
+          ctx.save();
+          // We constrain the text drawing to the slot boundaries
+          ctx.beginPath();
+          ctx.rect(x, y, w, h);
+          ctx.clip();
+          
+          // Use admin-configured fontSize if available, otherwise calculate proportionally
+          let fontSize: number;
+          if (slot.fontSize) {
+            // Scale the configured fontSize proportionally to the canvas dimensions
+            // The fontSize was set relative to a preview, we scale by canvas/frame ratio
+            const previewW = 400; // typical preview frame width in px
+            const canvasScale = canvas.width / previewW;
+            fontSize = slot.fontSize * canvasScale;
+          } else {
+            fontSize = Math.min(h * 0.6, w * 0.15, 80);
+          }
+          ctx.font = `bold ${fontSize}px ${slot.fontFamily || 'Inter'}`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          // Draw a subtle outline for contrast (white if text is dark, black if text is light)
+          const textColor = slot.color || '#000000';
+          ctx.fillStyle = textColor;
+          ctx.strokeStyle = textColor.toLowerCase() === '#ffffff' ? '#000000' : '#ffffff';
+          ctx.lineWidth = Math.max(2, fontSize * 0.05);
+          ctx.strokeText(data.textValue, x + w / 2, y + h / 2);
+          
+          // Draw text centered within the text slot rect
+          ctx.fillText(data.textValue, x + w / 2, y + h / 2);
+          
+          ctx.restore();
+        }
 
         canvas.toBlob((blob) => {
           objectUrls.forEach(u => URL.revokeObjectURL(u));

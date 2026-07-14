@@ -30,6 +30,11 @@ class StoreFrameTemplateRequest extends FormRequest
             'slots.*.y_percent' => 'required|numeric|min:0|max:100',
             'slots.*.width_percent' => 'required|numeric|min:0|max:100',
             'slots.*.height_percent' => 'required|numeric|min:0|max:100',
+            'slots.*.type' => 'nullable|string|in:photo,text',
+            'slots.*.fontFamily' => 'nullable|string|max:100',
+            'slots.*.color' => 'nullable|string|max:20',
+            'slots.*.fontSize' => 'nullable|integer|min:8|max:200',
+            'slots.*.maxChars' => 'nullable|integer|min:1|max:500',
         ];
     }
 

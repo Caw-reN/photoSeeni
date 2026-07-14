@@ -49,6 +49,11 @@ type SlotCoordinate = {
   width_percent?: number;
   height_percent?: number;
   order?: number;
+  type?: 'photo' | 'text';
+  fontFamily?: string;
+  color?: string;
+  fontSize?: number;
+  maxChars?: number;
 };
 
 type SlotData = {
@@ -57,6 +62,7 @@ type SlotData = {
   rotate: number;
   translateX: number;
   translateY: number;
+  textValue?: string;
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -142,13 +148,31 @@ export default function ResultPage() {
 
           const builtList: SlotData[][] = Array.from({ length: printCount }, (_, printIndex) => {
             const saved = savedList ? savedList[printIndex] : null;
-            return coords.map((_, i) => ({
-              photoUrl: sortedPhotos[i]?.url ? proxyImageUrl(sortedPhotos[i].url) : '',
-              scale: saved?.[i]?.scale ?? 1,
-              rotate: saved?.[i]?.rotate ?? 0,
-              translateX: saved?.[i]?.translateX ?? 0,
-              translateY: saved?.[i]?.translateY ?? 0,
-            }));
+            let photoIdx = 0;
+            return coords.map((coord, i) => {
+              const savedSlot = saved?.[i];
+              // For text slots, use textValue from saved data — don't consume a photo index
+              if (coord.type === 'text') {
+                return {
+                  photoUrl: '',
+                  scale: 1,
+                  rotate: 0,
+                  translateX: 0,
+                  translateY: 0,
+                  textValue: savedSlot?.textValue || '',
+                };
+              }
+              // Photo slot: consume a photo from sortedPhotos
+              const photo = sortedPhotos[photoIdx];
+              photoIdx++;
+              return {
+                photoUrl: photo?.url ? proxyImageUrl(photo.url) : '',
+                scale: savedSlot?.scale ?? 1,
+                rotate: savedSlot?.rotate ?? 0,
+                translateX: savedSlot?.translateX ?? 0,
+                translateY: savedSlot?.translateY ?? 0,
+              };
+            });
           });
 
           setSlotsDataList(builtList);
@@ -216,7 +240,7 @@ export default function ResultPage() {
         for (let i = 0; i < coordinates.length; i++) {
           const slot = coordinates[i];
           const data = slotsData[i];
-          if (!data?.photoUrl) continue;
+          if (!data || slot.type === 'text' || !data.photoUrl) continue;
 
           const img = await loadImageFromUrl(data.photoUrl);
           if (img.src.startsWith('blob:')) objectUrls.push(img.src);
@@ -252,6 +276,44 @@ export default function ResultPage() {
         if (frameOverlay.src.startsWith('blob:')) objectUrls.push(frameOverlay.src);
 
         ctx.drawImage(frameOverlay, 0, 0, canvas.width, canvas.height);
+
+        // Draw text slots on top of everything
+        for (let i = 0; i < coordinates.length; i++) {
+          const slot = coordinates[i];
+          const data = slotsData[i];
+          if (slot.type !== 'text' || !data || !data.textValue) continue;
+
+          const x = ((slot.x_percent ?? slot.x ?? 0) / 100) * canvas.width;
+          const y = ((slot.y_percent ?? slot.y ?? 0) / 100) * canvas.height;
+          const w = ((slot.width_percent ?? slot.width ?? 0) / 100) * canvas.width;
+          const h = ((slot.height_percent ?? slot.height ?? 0) / 100) * canvas.height;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(x, y, w, h);
+          ctx.clip();
+          
+          let fontSize: number;
+          if (slot.fontSize) {
+            const previewW = 400;
+            const canvasScale = canvas.width / previewW;
+            fontSize = slot.fontSize * canvasScale;
+          } else {
+            fontSize = Math.min(h * 0.6, w * 0.15, 80);
+          }
+          ctx.font = `bold ${fontSize}px ${slot.fontFamily || 'Inter'}`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          const textColor = slot.color || '#000000';
+          ctx.fillStyle = textColor;
+          ctx.strokeStyle = textColor.toLowerCase() === '#ffffff' ? '#000000' : '#ffffff';
+          ctx.lineWidth = Math.max(2, fontSize * 0.05);
+          ctx.strokeText(data.textValue, x + w / 2, y + h / 2);
+          
+          ctx.fillText(data.textValue, x + w / 2, y + h / 2);
+          ctx.restore();
+        }
         results[printIndex] = canvas.toDataURL('image/jpeg', 0.95);
       } catch (err: any) {
         console.error(`Canvas render error for print ${printIndex}:`, err);

@@ -14,6 +14,7 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Type,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +29,11 @@ type SlotCoordinate = {
   width_percent?: number;
   height_percent?: number;
   order?: number;
+  type?: 'photo' | 'text';
+  fontFamily?: string;
+  color?: string;
+  fontSize?: number;
+  maxChars?: number;
 };
 
 type Frame = {
@@ -51,6 +57,7 @@ type SlotData = {
   rotate: number;
   translateX: number;
   translateY: number;
+  textValue?: string;
 };
 
 const BACKEND_URL = (() => {
@@ -137,31 +144,31 @@ export default function EditPhotoPage() {
       }
       setPrintCount(pCount);
 
-      // Try to restore from already-arranged data, otherwise initialize fresh
-      const storedSlotsList = localStorage.getItem('arranged_slots_list');
-      const storedSlots = localStorage.getItem('arranged_slots');
-
-      let initialList: SlotData[][];
-      if (storedSlotsList) {
-        initialList = JSON.parse(storedSlotsList);
-        // Ensure printCount matches
-        if (initialList.length !== pCount) {
-          const baseSlots = initialList[0] || [];
-          initialList = Array.from({ length: pCount }, (_, pi) => initialList[pi] || baseSlots);
+      // Always build fresh slots from coordinates and photos (never restore stale cache)
+      // This ensures text slots are always properly identified from the frame definition
+      let photoIdx = 0;
+      const fresh: SlotData[] = coords.map((c) => {
+        if (c.type === 'text') {
+          return {
+            photoUrl: '',
+            scale: 1,
+            rotate: 0,
+            translateX: 0,
+            translateY: 0,
+            textValue: '',
+          };
         }
-      } else if (storedSlots) {
-        const base: SlotData[] = JSON.parse(storedSlots);
-        initialList = Array.from({ length: pCount }, () => base);
-      } else {
-        const fresh: SlotData[] = coords.map((_, index) => ({
-          photoUrl: photos[index] ? photos[index].url : '',
+        const pUrl = photos[photoIdx] ? photos[photoIdx].url : '';
+        photoIdx++;
+        return {
+          photoUrl: pUrl,
           scale: 1,
           rotate: 0,
           translateX: 0,
           translateY: 0,
-        }));
-        initialList = Array.from({ length: pCount }, () => fresh);
-      }
+        };
+      });
+      const initialList = Array.from({ length: pCount }, () => fresh.map(s => ({ ...s })));
       setSlotsDataList(initialList);
       setIsLoading(false);
     } catch (error) {
@@ -200,7 +207,7 @@ export default function EditPhotoPage() {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotIndex: number) => {
     e.preventDefault();
     const photoUrl = e.dataTransfer.getData('text/plain');
-    if (photoUrl) {
+    if (photoUrl && coordinates[slotIndex]?.type !== 'text') {
       setSlotsDataList(prev => {
         const newList = prev.map(arr => [...arr]);
         newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
@@ -223,10 +230,22 @@ export default function EditPhotoPage() {
     });
   };
 
+  const handleTextChange = (slotIndex: number, value: string) => {
+    const slot = coordinates[slotIndex];
+    const maxChars = slot?.maxChars || 200;
+    if (value.length > maxChars) return;
+    setSlotsDataList(prev => {
+      const newList = prev.map(arr => [...arr]);
+      newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
+      newList[activePrintIndex][slotIndex] = { ...newList[activePrintIndex][slotIndex], textValue: value };
+      return newList;
+    });
+  };
+
   const handleProceed = () => {
     // Auto-fill empty prints with Cetakan 1's data
     const finalSlotsDataList = slotsDataList.map((slots, i) => {
-      if (i > 0 && slots.every(s => !s.photoUrl)) {
+      if (i > 0 && slots.every(s => !s.photoUrl && !s.textValue)) {
         return [...slotsDataList[0]];
       }
       return slots;
@@ -239,7 +258,8 @@ export default function EditPhotoPage() {
 
   // Tap foto di strip → masukkan ke slot aktif atau slot kosong berikutnya
   const handlePhotoTap = (photoUrl: string) => {
-    if (activeSlotIndex !== null) {
+    // If we have an active slot and it is a photo slot (not text), replace it.
+    if (activeSlotIndex !== null && coordinates[activeSlotIndex]?.type !== 'text') {
       setSlotsDataList(prev => {
         const newList = prev.map(arr => [...arr]);
         newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
@@ -247,15 +267,21 @@ export default function EditPhotoPage() {
         return newList;
       });
     } else {
-      const emptyIdx = slotsData.findIndex(s => !s.photoUrl);
+      // Find the first empty photo slot
+      const slotsData = slotsDataList[activePrintIndex] || [];
+      const emptyIdx = slotsData.findIndex((s, i) => coordinates[i]?.type !== 'text' && !s.photoUrl);
       const targetIdx = emptyIdx !== -1 ? emptyIdx : 0;
-      setSlotsDataList(prev => {
-        const newList = prev.map(arr => [...arr]);
-        newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
-        newList[activePrintIndex][targetIdx] = { ...newList[activePrintIndex][targetIdx], photoUrl };
-        return newList;
-      });
-      setActiveSlotIndex(targetIdx);
+      
+      // If the target slot is indeed a photo slot, update it
+      if (coordinates[targetIdx]?.type !== 'text') {
+        setSlotsDataList(prev => {
+          const newList = prev.map(arr => [...arr]);
+          newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
+          newList[activePrintIndex][targetIdx] = { ...newList[activePrintIndex][targetIdx], photoUrl };
+          return newList;
+        });
+        setActiveSlotIndex(targetIdx);
+      }
     }
   };
 
@@ -272,6 +298,8 @@ export default function EditPhotoPage() {
 
   const slotsData = slotsDataList[activePrintIndex] || [];
   const activeData = activeSlotIndex !== null ? slotsData[activeSlotIndex] : null;
+  const activeCoord = activeSlotIndex !== null ? coordinates[activeSlotIndex] : null;
+  const isActiveText = activeCoord?.type === 'text';
 
   return (
     <div className="w-screen bg-[#1D1D23] flex flex-col md:flex-row overflow-hidden" style={{ height: '100dvh' }}>
@@ -285,10 +313,10 @@ export default function EditPhotoPage() {
         <ArrowLeft className="w-5 h-5 text-[#1D1D23]" strokeWidth={3} />
       </button>
 
-      {/* ══════════════════════════════════════════════════
+      {/* ──────────────────────────────────────────────────
            DESKTOP LAYOUT (md and above)
            Left: foto list | Center: canvas | Right: controls
-          ══════════════════════════════════════════════════ */}
+          ────────────────────────────────────────────────── */}
 
       {/* ─── DESKTOP KIRI: Daftar Foto ─── */}
       <div className="hidden md:flex md:w-[20%] md:min-w-[200px] md:max-w-[280px] bg-[#FFFDF7] border-r-4 border-slate-900 flex-col h-full z-30">
@@ -355,7 +383,7 @@ export default function EditPhotoPage() {
           )}
         </div>
         <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden py-2" onClick={() => setActiveSlotIndex(null)}>
-          <div className="relative h-full aspect-auto inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" onClick={(e) => e.stopPropagation()}>
+          <div className="relative h-full aspect-auto inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" style={{ containerType: 'inline-size' }} onClick={(e) => e.stopPropagation()}>
             {coordinates.map((slot, index) => {
               const isActive = activeSlotIndex === index;
               const data = slotsData[index];
@@ -371,10 +399,26 @@ export default function EditPhotoPage() {
                     top: `${slot.y_percent ?? slot.y ?? 0}%`,
                     width: `${slot.width_percent ?? slot.width ?? 0}%`,
                     height: `${slot.height_percent ?? slot.height ?? 0}%`,
+                    zIndex: slot.type === 'text' ? (isActive ? 30 : 20) : (isActive ? 15 : 5),
                   }}
-                  className={`overflow-hidden flex items-center justify-center relative bg-slate-200 transition-all cursor-pointer ${isActive ? 'ring-4 ring-indigo-500 ring-offset-2 z-20 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'z-0 hover:ring-2 hover:ring-indigo-300'}`}
+                  className={`overflow-hidden flex items-center justify-center relative transition-all cursor-pointer ${
+                    slot.type === 'text' ? 'bg-transparent' : 'bg-slate-200'
+                  } ${isActive ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'hover:ring-2 hover:ring-indigo-300'}`}
                 >
-                  {data?.photoUrl ? (
+                  {slot.type === 'text' ? (
+                    <div
+                      className="w-full h-full flex items-center justify-center pointer-events-none p-1"
+                      style={{
+                        fontFamily: slot.fontFamily || 'Inter',
+                        color: slot.color || '#000000',
+                        fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
+                      }}
+                    >
+                      <span className="truncate font-bold w-full text-center">
+                        {data?.textValue || (isActive ? '|  ketik disini  |' : 'Your Text Here')}
+                      </span>
+                    </div>
+                  ) : data?.photoUrl ? (
                     <img
                       src={data.photoUrl}
                       alt={`Slot ${index + 1}`}
@@ -422,33 +466,80 @@ export default function EditPhotoPage() {
       <div className={`hidden md:flex md:w-[350px] bg-[#FFFDF7] border-l-4 border-slate-900 flex-col h-full z-20 transition-transform duration-300 ${activeSlotIndex !== null ? 'translate-x-0' : 'translate-x-full absolute right-0'}`}>
         {activeSlotIndex !== null && activeData ? (
           <>
-            <div className="p-6 border-b-4 border-slate-900 shrink-0 bg-amber-400">
-              <h2 className="text-2xl font-black text-slate-900 drop-shadow-[2px_2px_0px_rgba(255,255,255,1)]">Edit Slot {activeSlotIndex + 1}</h2>
-              <p className="text-slate-900 text-sm font-extrabold">Atur posisi dan ukuran foto di slot ini.</p>
+            <div className={`p-6 border-b-4 border-slate-900 shrink-0 ${isActiveText ? 'bg-violet-500' : 'bg-amber-400'}`}>
+              <h2 className="text-2xl font-black text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,0.3)]">
+                {isActiveText ? (
+                  <span className="flex items-center gap-2"><Type className="w-6 h-6" /> Teks Slot {activeSlotIndex + 1}</span>
+                ) : (
+                  `Edit Slot ${activeSlotIndex + 1}`
+                )}
+              </h2>
+              <p className="text-white/90 text-sm font-extrabold mt-1">
+                {isActiveText ? 'Masukkan teks kustom Anda.' : 'Atur posisi dan ukuran foto di slot ini.'}
+              </p>
             </div>
             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-              <ControlCard icon={<ZoomIn className="w-5 h-5 text-indigo-600" strokeWidth={3} />} label="Zoom" value={`${activeData.scale.toFixed(1)}x`} valueClass="bg-indigo-100 text-indigo-800">
-                <input type="range" min="0.5" max="3" step="0.1" value={activeData.scale} onChange={(e) => handleControlChange('scale', parseFloat(e.target.value))} className="w-full accent-indigo-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
-              </ControlCard>
-              <ControlCard icon={<RotateCw className="w-5 h-5 text-emerald-600" strokeWidth={3} />} label="Putar" value={`${activeData.rotate}°`} valueClass="bg-emerald-100 text-emerald-800">
-                <input type="range" min="-180" max="180" step="1" value={activeData.rotate} onChange={(e) => handleControlChange('rotate', parseInt(e.target.value))} className="w-full accent-emerald-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
-                <div className="flex justify-center mt-3">
-                  <button onClick={() => handleControlChange('rotate', 0)} className="text-xs font-black bg-emerald-400 text-slate-900 hover:bg-emerald-300 px-4 py-2 rounded-lg border-2 border-slate-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">Reset Rotasi</button>
+              {isActiveText ? (
+                /* ── TEXT SLOT CONTROLS (Desktop) ── */
+                <div className="flex flex-col gap-4">
+                  <div className="bg-white border-4 border-slate-900 rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                      <label className="font-black text-slate-900 flex items-center gap-2">
+                        <Type className="w-4 h-4 text-violet-600" />
+                        Custom Text
+                      </label>
+                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg border border-slate-300">
+                        {(activeData.textValue || '').length}/{activeCoord?.maxChars || 200}
+                      </span>
+                    </div>
+                    <textarea
+                      value={activeData.textValue || ''}
+                      onChange={(e) => handleTextChange(activeSlotIndex, e.target.value)}
+                      placeholder="Ketik teks kustom di sini..."
+                      rows={3}
+                      maxLength={activeCoord?.maxChars || 200}
+                      className="w-full p-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-violet-500 font-semibold text-sm resize-none leading-relaxed"
+                      style={{
+                        fontFamily: activeCoord?.fontFamily || 'Inter',
+                        color: activeCoord?.color || '#000000',
+                        fontSize: activeCoord?.fontSize ? `${activeCoord.fontSize}px` : '14px',
+                      }}
+                    />
+                    <div className="flex flex-col gap-1 p-3 bg-violet-50 rounded-lg border border-violet-200">
+                      <p className="text-[11px] font-black text-violet-700 uppercase">Preview Style</p>
+                      <p className="text-[11px] text-violet-600">
+                        Font: <strong>{activeCoord?.fontFamily || 'Inter'}</strong> &bull; Ukuran: <strong>{activeCoord?.fontSize || 'auto'}px</strong> &bull; Max: <strong>{activeCoord?.maxChars || 200} karakter</strong>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </ControlCard>
-              <ControlCard icon={<MoveHorizontal className="w-5 h-5 text-rose-600" strokeWidth={3} />} label="Geser Kanan/Kiri" value={`${activeData.translateX}px`} valueClass="bg-rose-100 text-rose-800">
-                <input type="range" min="-500" max="500" step="5" value={activeData.translateX} onChange={(e) => handleControlChange('translateX', parseInt(e.target.value))} className="w-full accent-rose-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
-              </ControlCard>
-              <ControlCard icon={<MoveVertical className="w-5 h-5 text-sky-600" strokeWidth={3} />} label="Geser Atas/Bawah" value={`${activeData.translateY}px`} valueClass="bg-sky-100 text-sky-800">
-                <input type="range" min="-500" max="500" step="5" value={activeData.translateY} onChange={(e) => handleControlChange('translateY', parseInt(e.target.value))} className="w-full accent-sky-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
-              </ControlCard>
+              ) : (
+                /* ── PHOTO SLOT CONTROLS (Desktop) ── */
+                <>
+                  <ControlCard icon={<ZoomIn className="w-5 h-5 text-indigo-600" strokeWidth={3} />} label="Zoom" value={`${activeData.scale.toFixed(1)}x`} valueClass="bg-indigo-100 text-indigo-800">
+                    <input type="range" min="0.5" max="3" step="0.1" value={activeData.scale} onChange={(e) => handleControlChange('scale', parseFloat(e.target.value))} className="w-full accent-indigo-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
+                  </ControlCard>
+                  <ControlCard icon={<RotateCw className="w-5 h-5 text-emerald-600" strokeWidth={3} />} label="Putar" value={`${activeData.rotate}°`} valueClass="bg-emerald-100 text-emerald-800">
+                    <input type="range" min="-180" max="180" step="1" value={activeData.rotate} onChange={(e) => handleControlChange('rotate', parseInt(e.target.value))} className="w-full accent-emerald-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
+                    <div className="flex justify-center mt-3">
+                      <button onClick={() => handleControlChange('rotate', 0)} className="text-xs font-black bg-emerald-400 text-slate-900 hover:bg-emerald-300 px-4 py-2 rounded-lg border-2 border-slate-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">Reset Rotasi</button>
+                    </div>
+                  </ControlCard>
+                  <ControlCard icon={<MoveHorizontal className="w-5 h-5 text-rose-600" strokeWidth={3} />} label="Geser Kanan/Kiri" value={`${activeData.translateX}px`} valueClass="bg-rose-100 text-rose-800">
+                    <input type="range" min="-500" max="500" step="5" value={activeData.translateX} onChange={(e) => handleControlChange('translateX', parseInt(e.target.value))} className="w-full accent-rose-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
+                  </ControlCard>
+                  <ControlCard icon={<MoveVertical className="w-5 h-5 text-sky-600" strokeWidth={3} />} label="Geser Atas/Bawah" value={`${activeData.translateY}px`} valueClass="bg-sky-100 text-sky-800">
+                    <input type="range" min="-500" max="500" step="5" value={activeData.translateY} onChange={(e) => handleControlChange('translateY', parseInt(e.target.value))} className="w-full accent-sky-600 cursor-pointer h-3 bg-slate-200 rounded-full border-2 border-slate-900" />
+                  </ControlCard>
+                </>
+              )}
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-6 text-center opacity-50">
             <MousePointerClick className="w-16 h-16 text-slate-400 mb-4" />
-            <h3 className="text-xl font-black text-slate-600 mb-2">Pilih Slot Foto</h3>
-            <p className="font-bold text-slate-500">Klik salah satu foto di area tengah untuk mulai mengedit.</p>
+            <h3 className="text-xl font-black text-slate-600 mb-2">Pilih Slot</h3>
+            <p className="font-bold text-slate-500">Klik slot foto atau teks di area tengah untuk mulai mengedit.</p>
           </div>
         )}
       </div>
@@ -468,8 +559,8 @@ export default function EditPhotoPage() {
             <div className="flex items-center justify-between w-full">
               <span className="text-white font-black text-sm tracking-wide">Penempatan Foto</span>
               {activeSlotIndex !== null && (
-                <span className="bg-amber-400 text-slate-900 font-black text-xs px-3 py-1 rounded-full border-2 border-slate-900">
-                  SLOT {activeSlotIndex + 1} AKTIF
+                <span className={`font-black text-xs px-3 py-1 rounded-full border-2 border-slate-900 ${isActiveText ? 'bg-violet-400 text-white' : 'bg-amber-400 text-slate-900'}`}>
+                  {isActiveText ? `✏️ TEKS ${activeSlotIndex + 1}` : `SLOT ${activeSlotIndex + 1} AKTIF`}
                 </span>
               )}
             </div>
@@ -512,6 +603,7 @@ export default function EditPhotoPage() {
           <div className="flex-1 min-h-0 w-full flex items-center justify-center py-4 relative z-10">
             <div
               className="relative h-full aspect-auto inline-block rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-4 border-slate-800 bg-white"
+              style={{ containerType: 'inline-size' }}
               onClick={() => setActiveSlotIndex(null)}
             >
             {/* Photo slots — z di bawah frame */}
@@ -530,11 +622,26 @@ export default function EditPhotoPage() {
                     top: `${slot.y_percent ?? slot.y ?? 0}%`,
                     width: `${slot.width_percent ?? slot.width ?? 0}%`,
                     height: `${slot.height_percent ?? slot.height ?? 0}%`,
-                    zIndex: isActive ? 15 : 5,
+                    zIndex: slot.type === 'text' ? (isActive ? 30 : 25) : (isActive ? 15 : 5),
                   }}
-                  className={`overflow-hidden flex items-center justify-center bg-slate-300 cursor-pointer transition-all ${isActive ? 'ring-4 ring-amber-400 ring-offset-1' : ''}`}
+                  className={`overflow-hidden flex items-center justify-center cursor-pointer transition-all ${
+                    slot.type === 'text' ? 'bg-transparent' : 'bg-slate-300'
+                  } ${isActive ? `ring-4 ring-offset-1 ${slot.type === 'text' ? 'ring-violet-400' : 'ring-amber-400'}` : ''}`}
                 >
-                  {data?.photoUrl ? (
+                  {slot.type === 'text' ? (
+                    <div
+                      className="w-full h-full flex items-center justify-center pointer-events-none p-1"
+                      style={{
+                        fontFamily: slot.fontFamily || 'Inter',
+                        color: slot.color || '#000000',
+                        fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
+                      }}
+                    >
+                      <span className="truncate font-bold w-full text-center">
+                        {data?.textValue || (isActive ? '|  ketik disini  |' : 'Your Text')}
+                      </span>
+                    </div>
+                  ) : data?.photoUrl ? (
                     <img
                       src={data.photoUrl}
                       alt={`Slot ${index + 1}`}
@@ -586,8 +693,11 @@ export default function EditPhotoPage() {
         <div className="shrink-0 bg-[#111118] border-t-2 border-slate-700 z-20 relative">
           <div className="px-3 pt-2 pb-1 flex items-center gap-2">
             <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Foto Kamu</span>
-            {activeSlotIndex !== null && (
+            {activeSlotIndex !== null && !isActiveText && (
               <span className="text-amber-400 text-[10px] font-black">— ketuk foto untuk isi Slot {activeSlotIndex + 1}</span>
+            )}
+            {activeSlotIndex !== null && isActiveText && (
+              <span className="text-violet-400 text-[10px] font-black">— ketuk slot teks di atas untuk mengetik</span>
             )}
           </div>
           <div className="flex gap-3 px-3 pb-3 overflow-x-auto scroll-smooth" style={{ scrollbarWidth: 'none' }}>
@@ -621,12 +731,14 @@ export default function EditPhotoPage() {
         </div>
 
         {/* ── 3. CONTROLS PANEL (bawah) ── */}
-        <div className="shrink-0 bg-[#FFFDF7] border-t-4 border-slate-900 z-30" style={{ maxHeight: '35dvh', overflowY: 'auto' }}>
+        <div className="shrink-0 bg-[#FFFDF7] border-t-4 border-slate-900 z-30" style={{ maxHeight: '40dvh', overflowY: 'auto' }}>
           {activeSlotIndex !== null && activeData ? (
             <div className="p-4 flex flex-col gap-3">
               {/* Header kontrol */}
               <div className="flex items-center justify-between">
-                <span className="font-black text-slate-900 text-base">Edit Slot {activeSlotIndex + 1}</span>
+                <span className={`font-black text-base flex items-center gap-2 ${isActiveText ? 'text-violet-700' : 'text-slate-900'}`}>
+                  {isActiveText ? <><Type className="w-4 h-4" /> Teks Slot {activeSlotIndex + 1}</> : `Edit Slot ${activeSlotIndex + 1}`}
+                </span>
                 <button
                   onClick={() => setActiveSlotIndex(null)}
                   className="text-xs font-bold text-slate-500 border-2 border-slate-300 rounded-lg px-2 py-1 hover:bg-slate-100"
@@ -635,61 +747,95 @@ export default function EditPhotoPage() {
                 </button>
               </div>
 
-              {/* Zoom */}
-              <MobileControl
-                icon={<ZoomIn className="w-4 h-4 text-indigo-600" strokeWidth={3} />}
-                label="Zoom"
-                value={`${activeData.scale.toFixed(1)}x`}
-                valueClass="text-indigo-600"
-              >
-                <input type="range" min="0.5" max="3" step="0.1" value={activeData.scale}
-                  onChange={(e) => handleControlChange('scale', parseFloat(e.target.value))}
-                  className="w-full accent-indigo-600 h-2 cursor-pointer" />
-              </MobileControl>
-
-              {/* Putar */}
-              <MobileControl
-                icon={<RotateCw className="w-4 h-4 text-emerald-600" strokeWidth={3} />}
-                label="Putar"
-                value={`${activeData.rotate}°`}
-                valueClass="text-emerald-600"
-              >
-                <div className="flex gap-2 items-center">
-                  <input type="range" min="-180" max="180" step="1" value={activeData.rotate}
-                    onChange={(e) => handleControlChange('rotate', parseInt(e.target.value))}
-                    className="flex-1 accent-emerald-600 h-2 cursor-pointer" />
-                  <button onClick={() => handleControlChange('rotate', 0)} className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-1 rounded border border-emerald-400 shrink-0">Reset</button>
+              {isActiveText ? (
+                /* ── TEXT SLOT CONTROLS (Mobile) ── */
+                <div className="flex flex-col gap-2 bg-violet-50 p-3 rounded-xl border-2 border-violet-200">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black text-violet-700 uppercase">Teks Kustom</label>
+                    <span className="text-[10px] font-bold text-violet-500 bg-white px-2 py-0.5 rounded-full border border-violet-200">
+                      {(activeData.textValue || '').length}/{activeCoord?.maxChars || 200} karakter
+                    </span>
+                  </div>
+                  <textarea
+                    value={activeData.textValue || ''}
+                    onChange={(e) => handleTextChange(activeSlotIndex, e.target.value)}
+                    placeholder="Ketik teks kustom di sini..."
+                    rows={2}
+                    maxLength={activeCoord?.maxChars || 200}
+                    className="w-full p-2.5 border-2 border-violet-300 rounded-xl focus:outline-none focus:border-violet-500 font-semibold text-sm resize-none leading-relaxed bg-white"
+                    style={{
+                      fontFamily: activeCoord?.fontFamily || 'Inter',
+                      color: activeCoord?.color || '#000000',
+                      fontSize: activeCoord?.fontSize ? `${activeCoord.fontSize}px` : '14px',
+                    }}
+                    autoFocus
+                  />
+                  {activeCoord?.fontFamily && (
+                    <p className="text-[10px] text-violet-500 font-medium">
+                      Font: {activeCoord.fontFamily}
+                      {activeCoord.fontSize ? ` • ${activeCoord.fontSize}px` : ''}
+                    </p>
+                  )}
                 </div>
-              </MobileControl>
+              ) : (
+                <>
+                  {/* Zoom */}
+                  <MobileControl
+                    icon={<ZoomIn className="w-4 h-4 text-indigo-600" strokeWidth={3} />}
+                    label="Zoom"
+                    value={`${activeData.scale.toFixed(1)}x`}
+                    valueClass="text-indigo-600"
+                  >
+                    <input type="range" min="0.5" max="3" step="0.1" value={activeData.scale}
+                      onChange={(e) => handleControlChange('scale', parseFloat(e.target.value))}
+                      className="w-full accent-indigo-600 h-2 cursor-pointer" />
+                  </MobileControl>
 
-              {/* Geser X */}
-              <MobileControl
-                icon={<MoveHorizontal className="w-4 h-4 text-rose-600" strokeWidth={3} />}
-                label="Geser ← →"
-                value={`${activeData.translateX}px`}
-                valueClass="text-rose-600"
-              >
-                <input type="range" min="-500" max="500" step="5" value={activeData.translateX}
-                  onChange={(e) => handleControlChange('translateX', parseInt(e.target.value))}
-                  className="w-full accent-rose-600 h-2 cursor-pointer" />
-              </MobileControl>
+                  {/* Putar */}
+                  <MobileControl
+                    icon={<RotateCw className="w-4 h-4 text-emerald-600" strokeWidth={3} />}
+                    label="Putar"
+                    value={`${activeData.rotate}°`}
+                    valueClass="text-emerald-600"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <input type="range" min="-180" max="180" step="1" value={activeData.rotate}
+                        onChange={(e) => handleControlChange('rotate', parseInt(e.target.value))}
+                        className="flex-1 accent-emerald-600 h-2 cursor-pointer" />
+                      <button onClick={() => handleControlChange('rotate', 0)} className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-1 rounded border border-emerald-400 shrink-0">Reset</button>
+                    </div>
+                  </MobileControl>
 
-              {/* Geser Y */}
-              <MobileControl
-                icon={<MoveVertical className="w-4 h-4 text-sky-600" strokeWidth={3} />}
-                label="Geser ↑ ↓"
-                value={`${activeData.translateY}px`}
-                valueClass="text-sky-600"
-              >
-                <input type="range" min="-500" max="500" step="5" value={activeData.translateY}
-                  onChange={(e) => handleControlChange('translateY', parseInt(e.target.value))}
-                  className="w-full accent-sky-600 h-2 cursor-pointer" />
-              </MobileControl>
+                  {/* Geser X */}
+                  <MobileControl
+                    icon={<MoveHorizontal className="w-4 h-4 text-rose-600" strokeWidth={3} />}
+                    label="Geser ← →"
+                    value={`${activeData.translateX}px`}
+                    valueClass="text-rose-600"
+                  >
+                    <input type="range" min="-500" max="500" step="5" value={activeData.translateX}
+                      onChange={(e) => handleControlChange('translateX', parseInt(e.target.value))}
+                      className="w-full accent-rose-600 h-2 cursor-pointer" />
+                  </MobileControl>
+
+                  {/* Geser Y */}
+                  <MobileControl
+                    icon={<MoveVertical className="w-4 h-4 text-sky-600" strokeWidth={3} />}
+                    label="Geser ↑ ↓"
+                    value={`${activeData.translateY}px`}
+                    valueClass="text-sky-600"
+                  >
+                    <input type="range" min="-500" max="500" step="5" value={activeData.translateY}
+                      onChange={(e) => handleControlChange('translateY', parseInt(e.target.value))}
+                      className="w-full accent-sky-600 h-2 cursor-pointer" />
+                  </MobileControl>
+                </>
+              )}
             </div>
           ) : (
             <div className="p-4 flex items-center gap-3 text-slate-500">
               <MousePointerClick className="w-6 h-6 shrink-0" />
-              <p className="text-sm font-bold">Ketuk slot foto di preview atas untuk mengatur posisi foto.</p>
+              <p className="text-sm font-bold">Ketuk slot foto atau teks di preview atas untuk mengatur.</p>
             </div>
           )}
 
