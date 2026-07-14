@@ -54,10 +54,10 @@ export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create
     if (initialFrame && initialFrame.slots) {
       setSlots(initialFrame.slots.map((s: any) => ({
         id: Math.random().toString(36).substring(2, 9),
-        x: s.x_percent,
-        y: s.y_percent,
-        width: s.width_percent,
-        height: s.height_percent,
+        x: Number(s.x_percent),
+        y: Number(s.y_percent),
+        width: Number(s.width_percent),
+        height: Number(s.height_percent),
         type: s.type || 'photo',
         fontFamily: s.fontFamily,
         color: s.color,
