@@ -477,7 +477,6 @@ export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create
                 maxHeight: '65vh',
                 display: 'inline-block',
                 touchAction: 'none',
-                containerType: 'inline-size',
               }}
             >
               <img
@@ -486,7 +485,8 @@ export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create
                 className="max-h-[65vh] w-auto pointer-events-none select-none block"
               />
 
-              {slots.map((slot, index) => {
+              <div className="absolute inset-0 pointer-events-none" style={{ containerType: 'inline-size' }}>
+                {slots.map((slot, index) => {
                 const isActive = activeSlotId === slot.id;
                 return (
                   <div
@@ -498,7 +498,7 @@ export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create
                       width: `${slot.width}%`,
                       height: `${slot.height}%`,
                     }}
-                    className={`absolute flex items-center justify-center cursor-move border-2 ${
+                    className={`absolute flex items-center justify-center cursor-move border-2 pointer-events-auto ${
                       isActive
                         ? 'border-[#FF7F50] bg-[#FF7F50]/20 z-20'
                         : 'border-blue-500 bg-blue-500/10 z-10 hover:border-blue-400'
@@ -537,6 +537,7 @@ export default function FrameBuilder({ redirectUrl, initialFrame, mode = 'create
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
         </div>
