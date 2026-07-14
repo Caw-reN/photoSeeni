@@ -20,8 +20,7 @@ export default function EditFramePage() {
     const fetchFrame = async () => {
       try {
         const response = await frameTemplatesApi.get(id);
-        const data = await response.json();
-        setInitialFrame(data.data);
+        setInitialFrame(response.data);
       } catch (error) {
         toast.error('Failed to load frame template');
         router.push('/admin/frames');
