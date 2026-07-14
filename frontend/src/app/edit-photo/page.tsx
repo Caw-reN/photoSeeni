@@ -524,8 +524,19 @@ export default function EditPhotoPage() {
             />
             <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
               {coordinates.map((slot, index) => slot.type === 'text' ? renderDesktopSlot(slot, index) : null)}
+              {/* Overlay for active photo slot */}
+              {activeSlotIndex !== null && !isActiveText && activeCoord && (
+                <div
+                  className="absolute pointer-events-none ring-4 ring-indigo-500 ring-offset-2 shadow-[0_0_20px_rgba(99,102,241,0.6)] rounded-sm transition-all"
+                  style={{
+                    left: `${activeCoord.x_percent ?? activeCoord.x ?? 0}%`,
+                    top: `${activeCoord.y_percent ?? activeCoord.y ?? 0}%`,
+                    width: `${activeCoord.width_percent ?? activeCoord.width ?? 0}%`,
+                    height: `${activeCoord.height_percent ?? activeCoord.height ?? 0}%`,
+                  }}
+                />
+              )}
             </div>
-
           </div>
         </div>
         <div className="shrink-0 mt-6 z-20">
@@ -698,6 +709,18 @@ export default function EditPhotoPage() {
               {/* Text slots — z di atas frame */}
               <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
                 {coordinates.map((slot, index) => slot.type === 'text' ? renderMobileSlot(slot, index) : null)}
+                {/* Overlay for active photo slot */}
+                {activeSlotIndex !== null && !isActiveText && activeCoord && (
+                  <div
+                    className="absolute pointer-events-none ring-4 ring-amber-400 ring-offset-1 rounded-sm transition-all"
+                    style={{
+                      left: `${activeCoord.x_percent ?? activeCoord.x ?? 0}%`,
+                      top: `${activeCoord.y_percent ?? activeCoord.y ?? 0}%`,
+                      width: `${activeCoord.width_percent ?? activeCoord.width ?? 0}%`,
+                      height: `${activeCoord.height_percent ?? activeCoord.height ?? 0}%`,
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
