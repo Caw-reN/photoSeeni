@@ -700,7 +700,6 @@ export default function EditPhotoPage() {
                 {coordinates.map((slot, index) => slot.type === 'text' ? renderMobileSlot(slot, index) : null)}
               </div>
             </div>
-            </div>
           </div>
         </div>
 
