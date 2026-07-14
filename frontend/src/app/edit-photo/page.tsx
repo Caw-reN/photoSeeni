@@ -463,7 +463,7 @@ export default function EditPhotoPage() {
       </div>
 
       {/* ─── DESKTOP KANAN: Controls ─── */}
-      <div className={`hidden md:flex md:w-[350px] bg-[#FFFDF7] border-l-4 border-slate-900 flex-col h-full z-20 transition-transform duration-300 ${activeSlotIndex !== null ? 'translate-x-0' : 'translate-x-full absolute right-0'}`}>
+      <div className="hidden md:flex md:w-[350px] shrink-0 bg-[#FFFDF7] border-l-4 border-slate-900 flex-col h-full z-20">
         {activeSlotIndex !== null && activeData ? (
           <>
             <div className={`p-6 border-b-4 border-slate-900 shrink-0 ${isActiveText ? 'bg-violet-500' : 'bg-amber-400'}`}>
