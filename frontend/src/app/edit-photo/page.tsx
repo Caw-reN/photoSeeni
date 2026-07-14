@@ -301,6 +301,136 @@ export default function EditPhotoPage() {
   const activeCoord = activeSlotIndex !== null ? coordinates[activeSlotIndex] : null;
   const isActiveText = activeCoord?.type === 'text';
 
+  const renderDesktopSlot = (slot: any, index: number) => {
+    const isActive = activeSlotIndex === index;
+    const data = slotsData[index];
+    return (
+      <div
+        key={index}
+        onDrop={(e) => handleDrop(e, index)}
+        onDragOver={handleDragOver}
+        onClick={() => setActiveSlotIndex(index)}
+        style={{
+          position: 'absolute',
+          left: `${slot.x_percent ?? slot.x ?? 0}%`,
+          top: `${slot.y_percent ?? slot.y ?? 0}%`,
+          width: `${slot.width_percent ?? slot.width ?? 0}%`,
+          height: `${slot.height_percent ?? slot.height ?? 0}%`,
+          zIndex: slot.type === 'text' ? (isActive ? 30 : 20) : (isActive ? 15 : 5),
+        }}
+        className={`overflow-hidden flex items-center justify-center relative transition-all cursor-pointer pointer-events-auto ${
+          slot.type === 'text' ? 'bg-transparent' : 'bg-slate-200'
+        } ${isActive ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'hover:ring-2 hover:ring-indigo-300'}`}
+      >
+        {slot.type === 'text' ? (
+          <div
+            className="w-full h-full flex items-center justify-center pointer-events-none p-1"
+            style={{
+              fontFamily: slot.fontFamily || 'Inter',
+              color: slot.color || '#000000',
+              fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
+            }}
+          >
+            <span className="truncate font-bold w-full text-center">
+              {data?.textValue || (isActive ? '|  ketik disini  |' : 'Your Text Here')}
+            </span>
+          </div>
+        ) : data?.photoUrl ? (
+          <img
+            src={data.photoUrl}
+            alt={`Slot ${index + 1}`}
+            className="absolute max-w-none pointer-events-none"
+            style={{
+              top: '50%',
+              left: '50%',
+              ...(slotOrientations[index] === 'landscape'
+                ? { height: '100%', width: 'auto' }
+                : { width: '100%', height: 'auto' }),
+              transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
+              transformOrigin: 'center center',
+              filter: selectedFrame?.is_bw ? 'grayscale(100%)' : 'none',
+            }}
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              const ori = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
+              setSlotOrientations(prev => ({ ...prev, [index]: ori }));
+            }}
+          />
+        ) : (
+          <div className="flex flex-col items-center opacity-30 pointer-events-none">
+            <ImageIcon className="w-8 h-8 mb-1" />
+            <span className="text-xs font-black">SLOT {slot.order ?? index + 1}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderMobileSlot = (slot: any, index: number) => {
+    const isActive = activeSlotIndex === index;
+    const data = slotsData[index];
+    return (
+      <div
+        key={index}
+        onDrop={(e) => handleDrop(e, index)}
+        onDragOver={handleDragOver}
+        onClick={(e) => { e.stopPropagation(); setActiveSlotIndex(index === activeSlotIndex ? null : index); }}
+        style={{
+          position: 'absolute',
+          left: `${slot.x_percent ?? slot.x ?? 0}%`,
+          top: `${slot.y_percent ?? slot.y ?? 0}%`,
+          width: `${slot.width_percent ?? slot.width ?? 0}%`,
+          height: `${slot.height_percent ?? slot.height ?? 0}%`,
+          zIndex: slot.type === 'text' ? (isActive ? 30 : 25) : (isActive ? 15 : 5),
+        }}
+        className={`overflow-hidden flex items-center justify-center cursor-pointer pointer-events-auto transition-all ${
+          slot.type === 'text' ? 'bg-transparent' : 'bg-slate-300'
+        } ${isActive ? `ring-4 ring-offset-1 ${slot.type === 'text' ? 'ring-violet-400' : 'ring-amber-400'}` : ''}`}
+      >
+        {slot.type === 'text' ? (
+          <div
+            className="w-full h-full flex items-center justify-center pointer-events-none p-1"
+            style={{
+              fontFamily: slot.fontFamily || 'Inter',
+              color: slot.color || '#000000',
+              fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
+            }}
+          >
+            <span className="truncate font-bold w-full text-center">
+              {data?.textValue || (isActive ? '|  ketik disini  |' : 'Your Text')}
+            </span>
+          </div>
+        ) : data?.photoUrl ? (
+          <img
+            src={data.photoUrl}
+            alt={`Slot ${index + 1}`}
+            className="absolute max-w-none pointer-events-none"
+            style={{
+              top: '50%',
+              left: '50%',
+              ...(slotOrientations[index] === 'landscape'
+                ? { height: '100%', width: 'auto' }
+                : { width: '100%', height: 'auto' }),
+              transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
+              transformOrigin: 'center center',
+              filter: selectedFrame?.is_bw ? 'grayscale(100%)' : 'none',
+            }}
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              const ori = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
+              setSlotOrientations(prev => ({ ...prev, [index]: ori }));
+            }}
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-1 opacity-40 pointer-events-none">
+            <ImageIcon className="w-5 h-5 text-slate-600" />
+            <span className="text-[9px] font-black text-slate-600">SLOT {slot.order ?? index + 1}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-screen bg-[#1D1D23] flex flex-col md:flex-row overflow-hidden" style={{ height: '100dvh' }}>
 
@@ -384,77 +514,18 @@ export default function EditPhotoPage() {
         </div>
         <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden py-2" onClick={() => setActiveSlotIndex(null)}>
           <div className="relative h-full aspect-auto inline-block shadow-[8px_8px_0px_0px_rgba(30,41,59,1)] border-4 border-slate-900 rounded-xl bg-white" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
-            {coordinates.map((slot, index) => {
-              const isActive = activeSlotIndex === index;
-              const data = slotsData[index];
-              return (
-                <div
-                  key={index}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragOver={handleDragOver}
-                  onClick={() => setActiveSlotIndex(index)}
-                  style={{
-                    position: 'absolute',
-                    left: `${slot.x_percent ?? slot.x ?? 0}%`,
-                    top: `${slot.y_percent ?? slot.y ?? 0}%`,
-                    width: `${slot.width_percent ?? slot.width ?? 0}%`,
-                    height: `${slot.height_percent ?? slot.height ?? 0}%`,
-                    zIndex: slot.type === 'text' ? (isActive ? 30 : 20) : (isActive ? 15 : 5),
-                  }}
-                  className={`overflow-hidden flex items-center justify-center relative transition-all cursor-pointer pointer-events-auto ${
-                    slot.type === 'text' ? 'bg-transparent' : 'bg-slate-200'
-                  } ${isActive ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-[0_0_20px_rgba(99,102,241,0.6)]' : 'hover:ring-2 hover:ring-indigo-300'}`}
-                >
-                  {slot.type === 'text' ? (
-                    <div
-                      className="w-full h-full flex items-center justify-center pointer-events-none p-1"
-                      style={{
-                        fontFamily: slot.fontFamily || 'Inter',
-                        color: slot.color || '#000000',
-                        fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
-                      }}
-                    >
-                      <span className="truncate font-bold w-full text-center">
-                        {data?.textValue || (isActive ? '|  ketik disini  |' : 'Your Text Here')}
-                      </span>
-                    </div>
-                  ) : data?.photoUrl ? (
-                    <img
-                      src={data.photoUrl}
-                      alt={`Slot ${index + 1}`}
-                      className="absolute max-w-none pointer-events-none"
-                      style={{
-                        top: '50%',
-                        left: '50%',
-                        ...(slotOrientations[index] === 'landscape'
-                          ? { height: '100%', width: 'auto' }
-                          : { width: '100%', height: 'auto' }),
-                        transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
-                        transformOrigin: 'center center',
-                        filter: selectedFrame?.is_bw ? 'grayscale(100%)' : 'none',
-                      }}
-                      onLoad={(e) => {
-                        const img = e.currentTarget;
-                        const ori = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
-                        setSlotOrientations(prev => ({ ...prev, [index]: ori }));
-                      }}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center opacity-30 pointer-events-none">
-                      <ImageIcon className="w-8 h-8 mb-1" />
-                      <span className="text-xs font-black">SLOT {slot.order ?? index + 1}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              {coordinates.map((slot, index) => slot.type !== 'text' ? renderDesktopSlot(slot, index) : null)}
             </div>
             <img
               src={getFrameImageUrl(selectedFrame)}
               alt="Frame Overlay"
               className="h-full w-auto block relative z-10 pointer-events-none rounded-lg"
             />
+            <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
+              {coordinates.map((slot, index) => slot.type === 'text' ? renderDesktopSlot(slot, index) : null)}
+            </div>
+
           </div>
         </div>
         <div className="shrink-0 mt-6 z-20">
@@ -601,93 +672,34 @@ export default function EditPhotoPage() {
             )}
           </div>
 
-          {/* Frame + Slots Container */}
           <div className="flex-1 min-h-0 w-full flex items-center justify-center py-4 relative z-10">
             <div
               className="relative h-full aspect-auto inline-block rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-4 border-slate-800 bg-white"
               onClick={() => setActiveSlotIndex(null)}
             >
-            <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
-            {/* Photo slots — z di bawah frame */}
-            {coordinates.map((slot, index) => {
-              const isActive = activeSlotIndex === index;
-              const data = slotsData[index];
-              return (
-                <div
-                  key={index}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragOver={handleDragOver}
-                  onClick={(e) => { e.stopPropagation(); setActiveSlotIndex(index === activeSlotIndex ? null : index); }}
-                  style={{
-                    position: 'absolute',
-                    left: `${slot.x_percent ?? slot.x ?? 0}%`,
-                    top: `${slot.y_percent ?? slot.y ?? 0}%`,
-                    width: `${slot.width_percent ?? slot.width ?? 0}%`,
-                    height: `${slot.height_percent ?? slot.height ?? 0}%`,
-                    zIndex: slot.type === 'text' ? (isActive ? 30 : 25) : (isActive ? 15 : 5),
-                  }}
-                  className={`overflow-hidden flex items-center justify-center cursor-pointer pointer-events-auto transition-all ${
-                    slot.type === 'text' ? 'bg-transparent' : 'bg-slate-300'
-                  } ${isActive ? `ring-4 ring-offset-1 ${slot.type === 'text' ? 'ring-violet-400' : 'ring-amber-400'}` : ''}`}
-                >
-                  {slot.type === 'text' ? (
-                    <div
-                      className="w-full h-full flex items-center justify-center pointer-events-none p-1"
-                      style={{
-                        fontFamily: slot.fontFamily || 'Inter',
-                        color: slot.color || '#000000',
-                        fontSize: slot.fontSize ? `${(slot.fontSize / 400) * 100}cqw` : '6cqw',
-                      }}
-                    >
-                      <span className="truncate font-bold w-full text-center">
-                        {data?.textValue || (isActive ? '|  ketik disini  |' : 'Your Text')}
-                      </span>
-                    </div>
-                  ) : data?.photoUrl ? (
-                    <img
-                      src={data.photoUrl}
-                      alt={`Slot ${index + 1}`}
-                      className="absolute max-w-none pointer-events-none"
-                      style={{
-                        top: '50%',
-                        left: '50%',
-                        ...(slotOrientations[index] === 'landscape'
-                          ? { height: '100%', width: 'auto' }
-                          : { width: '100%', height: 'auto' }),
-                        transform: `translate(calc(-50% + ${data.translateX}px), calc(-50% + ${data.translateY}px)) scale(${data.scale}) rotate(${data.rotate}deg)`,
-                        transformOrigin: 'center center',
-                        filter: selectedFrame?.is_bw ? 'grayscale(100%)' : 'none',
-                      }}
-                      onLoad={(e) => {
-                        const img = e.currentTarget;
-                        const ori = img.naturalWidth >= img.naturalHeight ? 'landscape' : 'portrait';
-                        setSlotOrientations(prev => ({ ...prev, [index]: ori }));
-                      }}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 opacity-40 pointer-events-none">
-                      <ImageIcon className="w-5 h-5 text-slate-600" />
-                      <span className="text-[9px] font-black text-slate-600">SLOT {slot.order ?? index + 1}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+              <div className="absolute inset-0 z-0 pointer-events-none">
+                {coordinates.map((slot, index) => slot.type !== 'text' ? renderMobileSlot(slot, index) : null)}
+              </div>
 
-            {/* Frame image — z di atas slot, pointer-events-none */}
+              {/* Frame image — z di atas slot foto, pointer-events-none */}
+              <img
+                ref={frameImgRef}
+                src={getFrameImageUrl(selectedFrame)}
+                alt="Frame Overlay"
+                className="h-full w-auto block relative pointer-events-none rounded-xl"
+                style={{ zIndex: 10 }}
+                onLoad={() => {
+                  if (frameImgRef.current) {
+                    setFrameImgSize({ w: frameImgRef.current.offsetWidth, h: frameImgRef.current.offsetHeight });
+                  }
+                }}
+              />
+
+              {/* Text slots — z di atas frame */}
+              <div className="absolute inset-0 z-20 pointer-events-none" style={{ containerType: 'inline-size' }}>
+                {coordinates.map((slot, index) => slot.type === 'text' ? renderMobileSlot(slot, index) : null)}
+              </div>
             </div>
-            <img
-              ref={frameImgRef}
-              src={getFrameImageUrl(selectedFrame)}
-              alt="Frame Overlay"
-              className="h-full w-auto block relative pointer-events-none rounded-xl"
-              style={{ zIndex: 20 }}
-              onLoad={() => {
-                if (frameImgRef.current) {
-                  setFrameImgSize({ w: frameImgRef.current.offsetWidth, h: frameImgRef.current.offsetHeight });
-                }
-              }}
-            />
             </div>
           </div>
         </div>
