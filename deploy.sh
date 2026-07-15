@@ -46,10 +46,15 @@ else
     cd $REPO_DIR
 fi
 
-# 4. Set permissions for Laravel
+# 4. Set permissions and env for Laravel
 echo "🔒 Setting permissions..."
 sudo chmod -R 777 $REPO_DIR/backend/storage
 sudo chmod -R 777 $REPO_DIR/backend/bootstrap/cache
+
+if [ ! -f "$REPO_DIR/backend/.env" ]; then
+    echo "📝 Creating backend .env file..."
+    sudo cp $REPO_DIR/backend/.env.example $REPO_DIR/backend/.env
+fi
 
 # 5. Set up IP config for API (Important for Cloudflare later)
 SERVER_IP=$(curl -s http://checkip.amazonaws.com || echo "localhost")
