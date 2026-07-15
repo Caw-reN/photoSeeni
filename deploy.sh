@@ -68,6 +68,11 @@ echo "🏗️ Building and starting Docker containers..."
 sudo docker compose down
 sudo docker compose up -d --build
 
+# 7. Run database migrations and seeders
+echo "🗄️ Running database migrations and seeders..."
+sudo docker compose exec -T backend php artisan migrate --force
+sudo docker compose exec -T backend php artisan db:seed --force
+
 echo ""
 echo "🎉 Deployment Complete!"
 echo "✅ Backend API is running on port 8000"
