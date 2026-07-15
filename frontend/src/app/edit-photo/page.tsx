@@ -236,8 +236,11 @@ export default function EditPhotoPage() {
     if (value.length > maxChars) return;
     setSlotsDataList(prev => {
       const newList = prev.map(arr => [...arr]);
-      newList[activePrintIndex] = [...(newList[activePrintIndex] || [])];
-      newList[activePrintIndex][slotIndex] = { ...newList[activePrintIndex][slotIndex], textValue: value };
+      newList.forEach((printSlots) => {
+        if (printSlots[slotIndex]) {
+          printSlots[slotIndex] = { ...printSlots[slotIndex], textValue: value };
+        }
+      });
       return newList;
     });
   };

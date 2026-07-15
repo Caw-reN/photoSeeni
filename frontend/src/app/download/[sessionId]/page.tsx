@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { sessionsApi } from '@/lib/api';
 import { Download, Camera, Image as ImageIcon, Loader2, RefreshCw, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -47,6 +47,17 @@ type SlotData = {
 
 export default function DownloadPage() {
   const { sessionId } = useParams();
+  const searchParams = useSearchParams();
+  const textsParam = searchParams?.get('texts');
+  
+  const customTexts = useMemo<string[]>(() => {
+    if (textsParam) {
+      try {
+        return JSON.parse(textsParam);
+      } catch (_) {}
+    }
+    return [];
+  }, [textsParam]);
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -161,7 +172,7 @@ export default function DownloadPage() {
   }, [loadImageFromUrl]);
 
   // ── Framed GIF Generator ──
-  const generateFramedGif = useCallback(async (photos: any[], frameSrc: string, slot: any, bw: boolean) => {
+  const generateFramedGif = useCallback(async (photos: any[], frameSrc: string, slot: any, bw: boolean, coords: any[], texts: string[]) => {
     if (!photos || photos.length === 0 || !frameSrc || !slot) return;
     setFramedGifLoading(true);
     try {
@@ -213,6 +224,47 @@ export default function DownloadPage() {
             ctx.restore();
             
             ctx.drawImage(frameImg, 0, 0, gifW, gifH);
+
+            let textIdx = 0;
+            for (let i = 0; i < coords.length; i++) {
+              const textSlot = coords[i];
+              if (textSlot.type !== 'text') continue;
+              const textValue = texts[textIdx];
+              textIdx++;
+              if (!textValue) continue;
+
+              const tx = ((textSlot.x_percent ?? textSlot.x ?? 0) / 100) * gifW;
+              const ty = ((textSlot.y_percent ?? textSlot.y ?? 0) / 100) * gifH;
+              const tw = ((textSlot.width_percent ?? textSlot.width ?? 0) / 100) * gifW;
+              const th = ((textSlot.height_percent ?? textSlot.height ?? 0) / 100) * gifH;
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(tx, ty, tw, th);
+              ctx.clip();
+              
+              let fontSize: number;
+              if (textSlot.fontSize) {
+                const previewW = 400;
+                const canvasScale = gifW / previewW;
+                fontSize = textSlot.fontSize * canvasScale;
+              } else {
+                fontSize = Math.min(th * 0.6, tw * 0.15, 80);
+              }
+              ctx.font = `bold ${fontSize}px ${textSlot.fontFamily || 'Inter'}`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              
+              const textColor = textSlot.color || '#000000';
+              ctx.fillStyle = textColor;
+              ctx.strokeStyle = textColor.toLowerCase() === '#ffffff' ? '#000000' : '#ffffff';
+              ctx.lineWidth = Math.max(2, fontSize * 0.05);
+              
+              ctx.strokeText(textValue, tx + tw / 2, ty + th / 2);
+              ctx.fillText(textValue, tx + tw / 2, ty + th / 2);
+              ctx.restore();
+            }
+
             imageUrls.push(canvas.toDataURL('image/jpeg', 0.8));
           }
         } catch (e) { console.error('Error drawing photo for framed gif', e); }
@@ -289,11 +341,23 @@ export default function DownloadPage() {
           ? [...data.photos].sort((a: any, b: any) => a.slot_index - b.slot_index)
           : [];
 
+        // Read custom texts from either URL search params or backend session data
+        const sessionCustomTexts = data.custom_texts || customTexts;
+
         // Build slots data with defaults (no localStorage on download page)
-        const built: SlotData[] = coords.map((_, i) => ({
-          photoUrl: sorted[i]?.url ? proxyImageUrl(sorted[i].url) : '',
-          scale: 1, rotate: 0, translateX: 0, translateY: 0,
-        }));
+        let textIndex = 0;
+        const built: SlotData[] = coords.map((c, i) => {
+          let textValue = undefined;
+          if (c.type === 'text') {
+            textValue = sessionCustomTexts[textIndex] || '';
+            textIndex++;
+          }
+          return {
+            photoUrl: sorted[i]?.url ? proxyImageUrl(sorted[i].url) : '',
+            scale: 1, rotate: 0, translateX: 0, translateY: 0,
+            textValue,
+          };
+        });
         setSlotsData(built);
 
         // Trigger GIF generation
@@ -302,7 +366,7 @@ export default function DownloadPage() {
           
           const photoSlots = coords.filter((c: any) => c.type !== 'text');
           if (photoSlots.length === 1 && frameImgSrc) {
-            generateFramedGif(sorted, frameImgSrc, photoSlots[0], !!data.frame.is_bw);
+            generateFramedGif(sorted, frameImgSrc, photoSlots[0], !!data.frame.is_bw, coords, sessionCustomTexts);
           }
         }
       }
@@ -311,7 +375,7 @@ export default function DownloadPage() {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, generateGif]);
+  }, [sessionId, generateGif, generateFramedGif, customTexts]);
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
 

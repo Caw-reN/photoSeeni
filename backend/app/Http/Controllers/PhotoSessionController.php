@@ -107,6 +107,10 @@ class PhotoSessionController extends Controller
             $session->update(['gif_speed' => (int) $request->gif_speed]);
         }
 
+        if ($request->has('custom_texts')) {
+            $session->update(['custom_texts' => $request->input('custom_texts')]);
+        }
+
         $photos = $session->photos()->orderBy('slot_index')->get();
 
         if ($photos->count() < 1) {

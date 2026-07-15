@@ -203,7 +203,15 @@ export default function CheckoutPage() {
       try {
         await syncPhotosToServer(sessionId);
         const finalStripBlobs = await renderStripBlobs();
-        await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlobs, 150);
+        const customTexts: string[] = [];
+        if (slotsDataList[0] && coordinates.length > 0) {
+          coordinates.forEach((slot, i) => {
+            if (slot.type === 'text' && slotsDataList[0][i]?.textValue) {
+              customTexts.push(slotsDataList[0][i].textValue as string);
+            }
+          });
+        }
+        await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlobs, 150, customTexts);
         toast.success('Foto berhasil diproses!');
         
         // Clean up session info
@@ -250,8 +258,16 @@ export default function CheckoutPage() {
           try {
             // Render the custom strip matching coordinates and adjustments on client
             const finalStripBlobs = await renderStripBlobs();
+            const customTexts: string[] = [];
+            if (slotsDataList[0] && coordinates.length > 0) {
+              coordinates.forEach((slot, i) => {
+                if (slot.type === 'text' && slotsDataList[0][i]?.textValue) {
+                  customTexts.push(slotsDataList[0][i].textValue as string);
+                }
+              });
+            }
             // Complete the session and upload the custom strip
-            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150);
+            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150, customTexts);
             
             toast.success('Pembayaran sukses & foto berhasil diproses!');
             setPaymentStep('success');

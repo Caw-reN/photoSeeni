@@ -419,8 +419,22 @@ export default function ResultPage() {
   }
 
   const canShowLayered = frameImageUrl && coordinates.length > 0 && slotsDataList.length > 0;
+
+  let textQuery = '';
+  if (slotsDataList[0] && coordinates.length > 0) {
+    const customTexts: string[] = [];
+    coordinates.forEach((slot, i) => {
+      if (slot.type === 'text' && slotsDataList[0][i]?.textValue) {
+        customTexts.push(slotsDataList[0][i].textValue as string);
+      }
+    });
+    if (customTexts.length > 0) {
+      textQuery = `?texts=${encodeURIComponent(JSON.stringify(customTexts))}`;
+    }
+  }
+
   const qrDownloadUrl = typeof window !== 'undefined'
-    ? window.location.origin + '/download/' + sessionId
+    ? window.location.origin + '/download/' + sessionId + textQuery
     : '';
 
   // Determine the display mode

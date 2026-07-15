@@ -29,8 +29,6 @@ class EventRedeemController extends Controller
         $request->validate([
             'event_package_id' => 'required|exists:event_packages,id',
             'buyer_name'       => 'required|string|max:255',
-            'buyer_email'      => 'nullable|email|max:255',
-            'buyer_phone'      => 'nullable|string|max:20',
         ]);
 
         // Validate package belongs to this event
@@ -38,11 +36,6 @@ class EventRedeemController extends Controller
             ->where('event_id', $event->id)
             ->where('is_active', true)
             ->firstOrFail();
-
-        // Require at least email or phone
-        if (!$request->buyer_email && !$request->buyer_phone) {
-            return response()->json(['message' => 'Email atau nomor WhatsApp wajib diisi untuk mengirim hasil foto.'], 422);
-        }
 
         // Generate unique redeem code
         $code = EventRedeemCode::generateCode($event);

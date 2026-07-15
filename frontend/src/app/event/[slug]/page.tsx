@@ -39,8 +39,6 @@ export default function EventPage() {
   const [step, setStep] = useState<'package' | 'details'>('package');
   const [selectedPackage, setSelectedPackage] = useState<EventPackage | null>(null);
   const [buyerName, setBuyerName] = useState('');
-  const [buyerEmail, setBuyerEmail] = useState('');
-  const [buyerPhone, setBuyerPhone] = useState('');
   const [isPurchasing, setIsPurchasing] = useState(false);
 
   // Payment modal
@@ -94,15 +92,12 @@ export default function EventPage() {
   const handlePurchase = async () => {
     if (!selectedPackage) return toast.error('Pilih paket terlebih dahulu.');
     if (!buyerName.trim()) return toast.error('Nama wajib diisi.');
-    if (!buyerEmail.trim() && !buyerPhone.trim()) return toast.error('Email atau nomor WhatsApp wajib diisi.');
-
+    
     setIsPurchasing(true);
     try {
       const res = await eventsApi.purchase(slug, {
         event_package_id: selectedPackage.id,
         buyer_name: buyerName,
-        buyer_email: buyerEmail || undefined,
-        buyer_phone: buyerPhone || undefined,
         return_url: window.location.origin + `/event/${slug}`,
       });
 
@@ -137,6 +132,7 @@ export default function EventPage() {
           eventName: res.event?.name,
           packageName: res.package?.name,
           maxPhotos: res.package?.photo_count,
+          printCount: res.package?.print_count || 1,
           frameId: res.session.frame_id,
           sessionDuration: res.session.session_duration,
           allowedFrameIds: Array.isArray(res.event?.frame_templates)
@@ -380,30 +376,6 @@ export default function EventPage() {
                       value={buyerName}
                       onChange={e => setBuyerName(e.target.value)}
                       placeholder="Masukkan nama lengkap"
-                      className="w-full border-2 border-[#1D1D23] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">
-                      Email <span className="text-gray-400 font-normal normal-case">(untuk kirim link hasil foto)</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={buyerEmail}
-                      onChange={e => setBuyerEmail(e.target.value)}
-                      placeholder="contoh@email.com"
-                      className="w-full border-2 border-[#1D1D23] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-[#1D1D23] uppercase tracking-wide block mb-1">
-                      No. WhatsApp <span className="text-gray-400 font-normal normal-case">(opsional)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={buyerPhone}
-                      onChange={e => setBuyerPhone(e.target.value)}
-                      placeholder="08xxxxxxxxxx"
                       className="w-full border-2 border-[#1D1D23] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-[#8A2BE2] focus:ring-2 focus:ring-[#8A2BE2]/10"
                     />
                   </div>

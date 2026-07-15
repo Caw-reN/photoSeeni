@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://a035-160-22-192-46.ngrok-free.app/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://d310-2001-448a-9000-8f1-7048-daba-806d-1a88.ngrok-free.app/api';
 
 const getHeaders = () => {
   const headers: HeadersInit = {
@@ -161,7 +161,7 @@ export const sessionsApi = {
     });
   },
 
-  complete: (sessionId: number, frameId?: number, finalStripBlobs?: Blob | Blob[], gifSpeed?: number) => {
+  complete: (sessionId: number, frameId?: number, finalStripBlobs?: Blob | Blob[], gifSpeed?: number, customTexts?: string[]) => {
     if (finalStripBlobs) {
       const formData = new FormData();
       if (Array.isArray(finalStripBlobs)) {
@@ -177,6 +177,11 @@ export const sessionsApi = {
       if (gifSpeed) {
         formData.append('gif_speed', gifSpeed.toString());
       }
+      if (customTexts && customTexts.length > 0) {
+        customTexts.forEach((text, i) => {
+          formData.append(`custom_texts[${i}]`, text);
+        });
+      }
       return apiRequest(`/sessions/${sessionId}/complete`, {
         method: 'POST',
         body: formData,
@@ -189,6 +194,7 @@ export const sessionsApi = {
       body: JSON.stringify({
         frame_id: frameId,
         gif_speed: gifSpeed,
+        custom_texts: customTexts,
       }),
     });
   },
@@ -282,8 +288,6 @@ export const eventsApi = {
   purchase: (slug: string, data: {
     event_package_id: number;
     buyer_name: string;
-    buyer_email?: string;
-    buyer_phone?: string;
     return_url?: string;
   }) => apiRequest(`/events/${slug}/purchase`, {
     method: 'POST',

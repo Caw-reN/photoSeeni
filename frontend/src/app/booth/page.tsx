@@ -44,7 +44,7 @@ type Frame = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
-  : 'https://a035-160-22-192-46.ngrok-free.app';
+  : 'https://d310-2001-448a-9000-8f1-7048-daba-806d-1a88.ngrok-free.app';
 
 const getImageUrl = (pathOrUrl: string | undefined) => {
   if (!pathOrUrl) return '';
