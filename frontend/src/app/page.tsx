@@ -30,16 +30,10 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/booth"
-              className="neobrutal-button px-8 py-5 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] text-xl flex items-center justify-center gap-3"
-            >
-              <Camera className="w-6 h-6" /> Start Photo Session
-            </Link>
-            <Link
               href="/auth"
               className="neobrutal-button px-8 py-5 bg-[#3B82F6] text-white hover:bg-[#4f8ff7] text-xl flex items-center justify-center gap-3"
             >
-              Create Free Account
+              Sign In
             </Link>
           </div>
         </div>
@@ -131,10 +125,10 @@ export default function Home() {
 
             <div className="mt-8">
               <Link
-                href="/booth"
+                href="/auth"
                 className="neobrutal-button px-6 py-3.5 bg-yellow-400 text-[#1D1D23] hover:bg-yellow-300 text-lg inline-flex items-center gap-2"
               >
-                Go to Photobooth <Sparkles className="w-5 h-5 text-purple-600" />
+                Sign In to Get Started <Sparkles className="w-5 h-5 text-purple-600" />
               </Link>
             </div>
           </div>
