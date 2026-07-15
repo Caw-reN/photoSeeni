@@ -45,7 +45,7 @@ type SlotData = {
 
 const BACKEND_URL = (() => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (apiUrl && !apiUrl.startsWith('/')) return apiUrl.replace('/api', '');
+  if (apiUrl && !apiUrl.startsWith('/')) return (apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl);
   return '';
 })();
 
