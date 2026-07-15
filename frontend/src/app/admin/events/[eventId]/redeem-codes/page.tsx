@@ -171,8 +171,17 @@ export default function ManageRedeemCodesPage() {
             img { max-width: 100%; height: auto; page-break-inside: avoid; }
             @media print {
               @page { margin: 0; }
-              body { margin: 0; display: block; }
-              img { max-width: 100%; height: auto; page-break-inside: avoid; page-break-after: always; margin: 0; }
+              html, body { margin: 0; padding: 0; height: 100%; }
+              body { display: block; }
+              img { 
+                display: block; 
+                max-width: 100%; 
+                max-height: 99vh; 
+                object-fit: contain; 
+                page-break-inside: avoid; 
+                page-break-after: always; 
+                margin: 0 auto; 
+              }
               img:last-child { page-break-after: auto; }
             }
           </style>
