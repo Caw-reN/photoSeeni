@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Search, Copy, Check, Plus, Trash2, Loader2, CheckCircle2, AlertCircle, XCircle, Ticket, Mail, Phone, User, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Search, Copy, Check, Plus, Trash2, Loader2, CheckCircle2, AlertCircle, XCircle, Ticket, Mail, Phone, User, ExternalLink, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
 
-type EventPackage = { id: number; name: string; price: number; photo_count: number; is_active: boolean };
+type EventPackage = { id: number; name: string; price: number; photo_count: number; is_active: boolean; print_count?: number };
 
 type Event = {
   id: number; name: string; slug: string; organizer_name: string; is_active: boolean;
@@ -23,8 +23,15 @@ type RedeemCode = {
   is_used: boolean;
   used_at?: string;
   created_at: string;
-  package?: { id: number; name: string; price: number; photo_count: number };
+  package?: { id: number; name: string; price: number; photo_count: number; print_count?: number };
+  photo_session?: { id: number; final_image_path?: string; final_image_paths?: string[] };
 };
+
+const BACKEND_URL = (() => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && !apiUrl.startsWith('/')) return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
+  return '';
+})();
 
 type PaginatedRedeemCodes = {
   data: RedeemCode[];
@@ -128,6 +135,62 @@ export default function ManageRedeemCodesPage() {
     } catch (err: any) {
       toast.error(err.message || 'Gagal menghapus kode redeem.');
     }
+  };
+
+  const handlePrint = (code: RedeemCode) => {
+    if (!code.photo_session) {
+      toast.error('Data sesi foto tidak ditemukan.');
+      return;
+    }
+    const paths = code.photo_session.final_image_paths || (code.photo_session.final_image_path ? [code.photo_session.final_image_path] : []);
+    if (paths.length === 0) {
+      toast.error('Gambar hasil foto belum tersedia.');
+      return;
+    }
+    const printCount = code.package?.print_count || 1;
+    let printPaths = [...paths];
+    if (printPaths.length < printCount && printPaths.length > 0) {
+        // If there's only 1 path but they want 3 prints, duplicate it
+        if (printPaths.length === 1) {
+            printPaths = Array(printCount).fill(printPaths[0]);
+        }
+    }
+    const printUrls = printPaths.map(p => `${BACKEND_URL}/storage/${p}`);
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Gagal membuka jendela cetak. Periksa popup blocker.');
+      return;
+    }
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Cetak Foto - ${code.code}</title>
+          <style>
+            body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 20px; background: #fff; }
+            img { max-width: 100%; height: auto; page-break-inside: avoid; }
+            @media print {
+              @page { margin: 0; }
+              body { margin: 0; display: block; }
+              img { max-width: 100%; height: auto; page-break-inside: avoid; page-break-after: always; margin: 0; }
+              img:last-child { page-break-after: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printUrls.map(url => `<img src="${url}" />`).join('')}
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handleGenerateCodes = async (e: React.FormEvent) => {
@@ -417,6 +480,15 @@ export default function ManageRedeemCodesPage() {
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
+                  )}
+                  {code.is_used && code.package && (code.package.print_count ?? 0) > 0 && (
+                    <button 
+                      onClick={() => handlePrint(code)}
+                      className="px-3.5 py-1.5 border-2 border-purple-600 rounded-lg text-xs font-black bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors flex items-center gap-1"
+                      title="Cetak Fisik"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Cetak
+                    </button>
                   )}
                   <button 
                     onClick={() => handleDeleteCode(code)}

@@ -418,7 +418,7 @@ class EventRedeemController extends Controller
      */
     public function adminList(Request $request, Event $event)
     {
-        $query = $event->redeemCodes()->with('package');
+        $query = $event->redeemCodes()->with(['package', 'photoSession']);
 
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
