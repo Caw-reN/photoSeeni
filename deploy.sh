@@ -55,12 +55,14 @@ sudo chmod -R 777 $REPO_DIR/backend/bootstrap/cache
 SERVER_IP=$(curl -s http://checkip.amazonaws.com || echo "localhost")
 echo "🌐 Detected Server IP: $SERVER_IP"
 
-# Force frontend to talk to backend port 8000 on the VPS
-# Note: Next.js dev server reads this environment variable
+# Force frontend to talk to production API URL
+API_URL="https://api.fotoseeni.web.id/api"
+echo "🔗 Setting API URL to: $API_URL"
+
 if grep -q "NEXT_PUBLIC_API_URL=" $REPO_DIR/frontend/.env.local 2>/dev/null; then
-    sudo sed -i "s|NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=http://${SERVER_IP}:8000/api|g" $REPO_DIR/frontend/.env.local
+    sudo sed -i "s|NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=${API_URL}|g" $REPO_DIR/frontend/.env.local
 else
-    echo "NEXT_PUBLIC_API_URL=http://${SERVER_IP}:8000/api" | sudo tee $REPO_DIR/frontend/.env.local
+    echo "NEXT_PUBLIC_API_URL=${API_URL}" | sudo tee $REPO_DIR/frontend/.env.local
 fi
 
 # 6. Build and run containers
