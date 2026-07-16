@@ -59,12 +59,6 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4">
-          <Link
-            href="/booth"
-            className="neobrutal-button px-5 py-2.5 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] text-sm flex items-center gap-2"
-          >
-            <Camera className="w-4 h-4" /> Start Session
-          </Link>
 
           {user ? (
             <div className="flex items-center gap-3">
@@ -117,13 +111,6 @@ export default function Header() {
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-[#FFFDF7] border-b-3 border-[#1D1D23] shadow-lg p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 z-40">
-          <Link
-            href="/booth"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="neobrutal-button w-full px-5 py-3 bg-[#FF7F50] text-[#1D1D23] hover:bg-[#ff8e66] font-bold flex items-center justify-center gap-2"
-          >
-            <Camera className="w-5 h-5" /> Start Session
-          </Link>
 
           {user ? (
             <>
