@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QrCode, Camera, Search, AlertCircle, CheckCircle2, Loader2, Package, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,7 +15,7 @@ type ValidateResult = {
   package?: { name: string; photo_count: number };
 };
 
-export default function RedeemPage() {
+function RedeemContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [code, setCode] = useState('');
@@ -251,5 +251,17 @@ export default function RedeemPage() {
         })()}
       </div>
     </div>
+  );
+}
+
+export default function RedeemPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-[#8A2BE2]" />
+      </div>
+    }>
+      <RedeemContent />
+    </Suspense>
   );
 }

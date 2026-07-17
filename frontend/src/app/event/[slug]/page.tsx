@@ -12,6 +12,7 @@ type EventPackage = {
   description?: string;
   price: number;
   photo_count: number;
+  print_count?: number;
   frame_template?: { name: string } | null;
 };
 
