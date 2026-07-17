@@ -24,6 +24,12 @@ const BACKEND_URL = (() => {
   return '';
 })();
 
+const proxyImageUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.startsWith('/')) return url; // relative URL — Next.js rewrites handle it
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+};
+
 export default function EventResultPage() {
   const params = useParams();
   const router = useRouter();
@@ -41,7 +47,22 @@ export default function EventResultPage() {
       .finally(() => setIsLoading(false));
   }, [code]);
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
+    // If the backend returns multiple final_image_urls (multi-print feature)
+    if ((data?.session as any)?.final_image_urls?.length > 0) {
+      (data?.session as any).final_image_urls.forEach((url: string, index: number) => {
+        const a = document.createElement('a');
+        a.href = proxyImageUrl(url.startsWith('http') ? url : `${BACKEND_URL}/storage/${url}`);
+        a.download = `fotoseeni-${data?.redeem_code.code}-strip-${index + 1}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+      toast.success('Semua foto berhasil didownload!');
+      return;
+    }
+
+    // Fallback: single image
     if (!data?.final_image_url && !data?.session.final_image_path) {
       toast.error('Foto belum tersedia untuk didownload.');
       return;
@@ -50,13 +71,12 @@ export default function EventResultPage() {
       || `${BACKEND_URL}/storage/${data.session.final_image_path}`;
 
     try {
-      const res = await fetch(url, { headers: { 'ngrok-skip-browser-warning': '69420' } });
-      const blob = await res.blob();
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      a.href = proxyImageUrl(url);
       a.download = `fotoseeni-${data.redeem_code.code}.jpg`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a.href);
+      document.body.removeChild(a);
       toast.success('Foto berhasil didownload!');
     } catch {
       toast.error('Gagal mendownload foto.');
