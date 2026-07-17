@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Camera, Package, CheckCircle2, Loader2, QrCode, AlertCircle, ArrowLeft, ArrowRight, MapPin, Calendar, Building2, ShieldCheck, Copy } from 'lucide-react';
+import { Camera, Package, CheckCircle2, Loader2, QrCode, AlertCircle, ArrowLeft, ArrowRight, MapPin, Calendar, Building2, ShieldCheck, Copy, XCircle, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
 
@@ -51,6 +51,9 @@ export default function EventPage() {
   const [pollingCode, setPollingCode] = useState<string | null>(null);
 
   useEffect(() => {
+    if (slug && typeof window !== 'undefined') {
+      localStorage.setItem('last_event_slug', slug);
+    }
     eventsApi.getEvent(slug)
       .then(setEvent)
       .catch(() => setError('Event tidak ditemukan atau sudah berakhir.'))
@@ -244,8 +247,19 @@ export default function EventPage() {
                       <div className="space-y-2 mb-6">
                         <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <span>{pkg.photo_count}x Cetak Frame Foto</span>
+                          <span>Ambil {pkg.photo_count}x Foto (Pose)</span>
                         </div>
+                        {pkg.print_count && pkg.print_count > 0 ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>Cetak Fisik {pkg.print_count}x</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
+                            <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                            <span>Tanpa Cetak Fisik (Digital Only)</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                           <span className="truncate">{pkg.frame_template?.name ?? 'Frame Event Eksklusif'}</span>
@@ -306,7 +320,7 @@ export default function EventPage() {
                 Jika kamu sudah membeli paket sebelumnya dan mendapatkan kode redeem, kamu bisa langsung masuk ke booth melalui halaman redeem.
               </p>
               <button
-                onClick={() => router.push('/redeem')}
+                onClick={() => router.push(`/redeem?event=${slug}`)}
                 className="w-full sm:w-auto px-6 py-3 bg-amber-400 text-[#1D1D23] border-3 border-[#1D1D23] rounded-xl font-black text-sm shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0px_#1D1D23] active:shadow-none transition-all flex items-center justify-center gap-2"
               >
                 Masukkan Kode Redeem →

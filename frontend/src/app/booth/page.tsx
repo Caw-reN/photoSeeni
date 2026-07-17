@@ -17,7 +17,7 @@ import {
   Settings,
   Zap,
 } from 'lucide-react';
-import { framesApi, sessionsApi, frameTemplatesApi } from '@/lib/api';
+import { framesApi, sessionsApi, frameTemplatesApi, settingsApi } from '@/lib/api';
 import { AnimatePresence, motion, useDragControls } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -44,7 +44,7 @@ type Frame = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
-  : 'https://d310-2001-448a-9000-8f1-7048-daba-806d-1a88.ngrok-free.app';
+  : 'https://e53e-103-224-73-153.ngrok-free.app';
 
 const getImageUrl = (pathOrUrl: string | undefined) => {
   if (!pathOrUrl) return '';
@@ -89,6 +89,17 @@ function BoothContent() {
   const eventSessionId = searchParams.get('session');
   const isEventMode = !!redeemCode;
   const [eventInfo, setEventInfo] = useState<{ eventName?: string; packageName?: string; maxPhotos?: number; frameId?: number } | null>(null);
+  const [sessionsDisabled, setSessionsDisabled] = useState(false);
+
+  // ── Check if regular sessions are disabled (event mode) ──
+  useEffect(() => {
+    if (isEventMode) return; // Event mode bypasses this check
+    settingsApi.getPublic().then((data: any) => {
+      if (data.regular_sessions_enabled === false) {
+        setSessionsDisabled(true);
+      }
+    }).catch(() => {});
+  }, [isEventMode]);
 
   // ── Hydrate photos from localStorage on mount ──
   useEffect(() => {
@@ -601,7 +612,36 @@ function BoothContent() {
     router.push('/');
   };
 
+  // ── Sessions Disabled (Event Mode) ──
+  if (sessionsDisabled && !isEventMode) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6 bg-[#1D1D23]">
+        <div className="w-full max-w-md bg-[#FFFDF7] border-4 border-[#1D1D23] rounded-3xl shadow-[8px_8px_0px_#8A2BE2] p-8 flex flex-col gap-5 text-center">
+          <div className="mx-auto p-4 bg-[#8A2BE2] border-3 border-[#1D1D23] rounded-2xl w-fit">
+            <Camera className="w-10 h-10 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-[#1D1D23] mb-2">Sesi Reguler Dinonaktifkan</h2>
+            <p className="text-gray-600 font-medium leading-relaxed">
+              Sesi reguler sedang dinonaktifkan sementara karena ada <span className="font-black text-[#8A2BE2]">Event</span> yang sedang berlangsung.
+            </p>
+            <p className="text-gray-500 font-medium mt-2 text-sm">
+              Silakan gunakan <strong>QR Code</strong> atau <strong>Link Redeem</strong> dari event Anda untuk memulai sesi foto.
+            </p>
+          </div>
+          <button
+            className="w-full py-3 rounded-2xl bg-[#1D1D23] text-white font-black border-3 border-[#1D1D23] shadow-[4px_4px_0px_#8A2BE2] hover:opacity-90 transition-all"
+            onClick={() => router.push('/')}
+          >
+            ← Kembali ke Beranda
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ── Error State ──
+
   if (error && !cameraReady) {
     return (
       <div className="flex flex-1 items-center justify-center p-6 bg-[#1D1D23]">

@@ -7,12 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class PhotoSession extends Model
 {
     use HasFactory;
 
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (PhotoSession $session) {
+            if (empty($session->uuid)) {
+                $session->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
     protected $fillable = [
+        'uuid',
         'user_id',
         'frame_id',
         'status',

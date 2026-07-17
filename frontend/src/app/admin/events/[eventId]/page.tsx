@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Plus, Pencil, Trash2, Eye, Loader2, Package, QrCode, MapPin, Calendar, Info, Layers } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Eye, Loader2, Package, QrCode, MapPin, Calendar, Info, Layers, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
 
@@ -171,7 +171,19 @@ export default function EventDetailPage() {
               )}
             </div>
           </div>
+        </div>
 
+        {/* Internal Navigation Tabs */}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-1">
+          <button className="px-5 py-2.5 bg-[#1D1D23] text-white border-3 border-[#1D1D23] rounded-xl shadow-[3px_3px_0px_#8A2BE2] font-black text-sm flex items-center gap-2 whitespace-nowrap">
+            <Info className="w-4 h-4" /> Detail & Paket
+          </button>
+          <button 
+            onClick={() => router.push(`/admin/events/${event.id}/redeem-codes`)}
+            className="px-5 py-2.5 bg-white text-[#1D1D23] border-3 border-[#1D1D23] rounded-xl hover:bg-gray-50 shadow-[3px_3px_0px_#1D1D23] hover:shadow-[4px_4px_0px_#8A2BE2] font-black text-sm flex items-center gap-2 transition-all whitespace-nowrap"
+          >
+            <Ticket className="w-4 h-4" /> Manajemen Redeem Codes
+          </button>
         </div>
 
         {/* Stats Grid Dashboard */}
@@ -253,12 +265,6 @@ export default function EventDetailPage() {
 
         {/* Global Event Action Panel */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <a 
-            href={`/admin/events/${event.id}/redeem-codes`} 
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 border-3 border-[#1D1D23] rounded-2xl font-black text-sm bg-[#1D1D23] text-white hover:opacity-90 transition-opacity shadow-[4px_4px_0px_rgba(0,0,0,0.15)] active:scale-95"
-          >
-            <QrCode className="w-5 h-5" /> Kelola Kode Redeem Event
-          </a>
           <a 
             href={`/event/${event.slug}`} 
             target="_blank" 

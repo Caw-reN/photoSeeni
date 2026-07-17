@@ -47,6 +47,7 @@ class SettingController extends Controller
             'payment_enabled' => Setting::getValue('payment_enabled', 'true') === 'true',
             'session_price' => (int) Setting::getValue('session_price', '25000'),
             'service_fee' => (int) Setting::getValue('service_fee', '1500'),
+            'regular_sessions_enabled' => Setting::getValue('regular_sessions_enabled', 'true') === 'true',
         ]);
     }
 }

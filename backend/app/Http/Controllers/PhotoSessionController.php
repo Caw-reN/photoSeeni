@@ -34,6 +34,14 @@ class PhotoSessionController extends Controller
 
     public function store(Request $request)
     {
+        // Block regular session creation if admin has disabled it (e.g. during a live event)
+        if (Setting::getValue('regular_sessions_enabled', 'true') === 'false') {
+            return response()->json([
+                'message' => 'Sesi reguler sedang dinonaktifkan sementara karena ada event yang sedang berlangsung. Silakan gunakan kode redeem dari event Anda.',
+                'disabled' => true,
+            ], 403);
+        }
+
         $request->validate([
             'frame_id' => 'nullable|exists:frame_templates,id',
         ]);
@@ -45,6 +53,21 @@ class PhotoSessionController extends Controller
         ]);
 
         return response()->json($session->load(['frame', 'photos']), 201);
+    }
+
+    /**
+     * Resolve a session by UUID (new) or integer ID (legacy backward compat).
+     * This allows old QR codes with integer IDs to keep working.
+     */
+    private function resolveSession(string $identifier): PhotoSession
+    {
+        // If it looks like an integer, try ID lookup first (legacy)
+        if (ctype_digit($identifier)) {
+            return PhotoSession::findOrFail((int) $identifier);
+        }
+
+        // Otherwise treat as UUID
+        return PhotoSession::where('uuid', $identifier)->firstOrFail();
     }
 
     public function uploadPhoto(Request $request, $sessionId)
@@ -84,7 +107,7 @@ class PhotoSessionController extends Controller
 
     public function complete(Request $request, $sessionId)
     {
-        $session = PhotoSession::findOrFail($sessionId);
+        $session = $this->resolveSession($sessionId);
 
         // Security check
         if ($session->user_id) {
@@ -211,7 +234,15 @@ class PhotoSessionController extends Controller
 
     public function show($sessionId)
     {
-        $session = PhotoSession::with(['frame', 'photos', 'event'])->findOrFail($sessionId);
+        $session = PhotoSession::with(['frame', 'photos', 'event'])
+            ->where(function ($q) use ($sessionId) {
+                if (ctype_digit((string) $sessionId)) {
+                    $q->where('id', (int) $sessionId);
+                } else {
+                    $q->where('uuid', $sessionId);
+                }
+            })
+            ->firstOrFail();
 
         $responseData = $session->toArray();
         if ($session->final_image_paths && is_array($session->final_image_paths)) {
@@ -235,9 +266,11 @@ class PhotoSessionController extends Controller
 
     public function destroy(Request $request, $sessionId)
     {
-        $session = PhotoSession::where('id', $sessionId)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
+        $session = $this->resolveSession($sessionId);
+
+        if ($session->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized');
+        }
 
         // Delete associated photos from storage
         foreach ($session->photos as $photo) {
@@ -259,7 +292,16 @@ class PhotoSessionController extends Controller
 
     private function findEditableSession($sessionId, $user)
     {
-        $session = PhotoSession::where('id', $sessionId)->where('status', 'active')->firstOrFail();
+        // Dual lookup: UUID (new) or integer ID (legacy)
+        $session = PhotoSession::where('status', 'active')
+            ->where(function ($q) use ($sessionId) {
+                if (ctype_digit((string) $sessionId)) {
+                    $q->where('id', (int) $sessionId);
+                } else {
+                    $q->where('uuid', $sessionId);
+                }
+            })
+            ->firstOrFail();
 
         if ($session->user_id) {
             if (!$user || $session->user_id !== $user->id) {
@@ -319,7 +361,7 @@ class PhotoSessionController extends Controller
      */
     public function initiatePayment(Request $request, $sessionId)
     {
-        $session = PhotoSession::findOrFail($sessionId);
+        $session = $this->resolveSession($sessionId);
 
         // Security check
         if ($session->user_id && (!auth()->check() || $session->user_id !== auth()->id())) {
@@ -405,7 +447,7 @@ class PhotoSessionController extends Controller
      */
     public function checkPaymentStatus(Request $request, $sessionId)
     {
-        $session = PhotoSession::with(['frame', 'photos'])->findOrFail($sessionId);
+        $session = $this->resolveSession($sessionId);
 
         // Security check
         if ($session->user_id && (!auth()->check() || $session->user_id !== auth()->id())) {
@@ -537,7 +579,7 @@ class PhotoSessionController extends Controller
 
     public function downloadStrip($sessionId)
     {
-        $session = PhotoSession::findOrFail($sessionId);
+        $session = $this->resolveSession($sessionId);
         if (!$session->final_image_path) {
             abort(404, 'Photo strip not ready');
         }

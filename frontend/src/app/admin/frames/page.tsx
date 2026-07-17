@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { frameTemplatesApi } from '@/lib/api';
-import { Loader2, Trash2, Image as ImageIcon, Eye, EyeOff, User, Circle, Edit2 } from 'lucide-react';
+import { Loader2, Trash2, Image as ImageIcon, Eye, EyeOff, User, Circle, Edit2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -73,6 +73,12 @@ export default function AdminFramesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-black text-[#1D1D23]">🖼 Frame Templates</h2>
+        <Link 
+          href="/admin/builder"
+          className="px-5 py-2.5 border-3 border-[#1D1D23] bg-[#8A2BE2] text-white rounded-xl shadow-[3px_3px_0px_#1D1D23] font-black text-sm flex items-center gap-2 hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_#1D1D23] active:translate-y-[2px] active:shadow-[1px_1px_0px_#1D1D23] transition-all"
+        >
+          <Plus className="w-4 h-4" /> Add Custom Frame
+        </Link>
       </div>
 
       {loading ? (

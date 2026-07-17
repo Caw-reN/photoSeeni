@@ -211,7 +211,7 @@ export default function CheckoutPage() {
             }
           });
         }
-        await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlobs, 150, customTexts);
+        const result = await sessionsApi.complete(Number(sessionId), selectedFrame.id, finalStripBlobs, 150, customTexts);
         toast.success('Foto berhasil diproses!');
         
         // Clean up session info
@@ -220,7 +220,9 @@ export default function CheckoutPage() {
         localStorage.removeItem('active_session_id');
         localStorage.removeItem('event_gif_speed');
         
-        router.push(`/result/${sessionId}`);
+        // Use UUID for the result URL (secure, non-enumerable)
+        const resultId = result?.session?.uuid || result?.uuid || sessionId;
+        router.push(`/result/${resultId}`);
       } catch (err: any) {
         console.error('Auto event session processing error:', err);
         toast.error(err?.message || 'Gagal memproses foto event.');
@@ -267,7 +269,7 @@ export default function CheckoutPage() {
               });
             }
             // Complete the session and upload the custom strip
-            await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150, customTexts);
+            const completeResult = await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150, customTexts);
             
             toast.success('Pembayaran sukses & foto berhasil diproses!');
             setPaymentStep('success');
@@ -280,8 +282,9 @@ export default function CheckoutPage() {
               localStorage.removeItem('selected_frame');
               localStorage.removeItem('active_session_id');
               localStorage.removeItem('event_gif_speed');
-              // Navigate to online result page
-              router.push(`/result/${sessionId}`);
+              // Navigate to online result page using UUID (secure)
+              const resultId = completeResult?.session?.uuid || completeResult?.uuid || sessionId;
+              router.push(`/result/${resultId}`);
             }, 2000);
           } catch (completeErr) {
             console.error('Failed to render or complete session client-side:', completeErr);
@@ -294,6 +297,7 @@ export default function CheckoutPage() {
               localStorage.removeItem('captured_photos');
               localStorage.removeItem('selected_frame');
               localStorage.removeItem('active_session_id');
+              // Fallback to integer session ID if uuid unavailable
               router.push(`/result/${sessionId}`);
             }, 2000);
           }
@@ -600,7 +604,7 @@ export default function CheckoutPage() {
         const finalStripBlobs = await renderStripBlobs();
 
         // Complete the session in the backend so it composites the strip
-        await sessionsApi.complete(Number(activeSession), selectedFrame.id, finalStripBlobs, 150);
+        const completeResult = await sessionsApi.complete(Number(activeSession), selectedFrame.id, finalStripBlobs, 150);
         toast.success('Pembayaran sukses & foto berhasil diproses!');
         setPaymentStep('success');
         
@@ -611,8 +615,9 @@ export default function CheckoutPage() {
           localStorage.removeItem('selected_frame');
           localStorage.removeItem('active_session_id');
           localStorage.removeItem('event_gif_speed');
-          // Navigate to online result page
-          router.push(`/result/${activeSession}`);
+          // Navigate to online result page using UUID (secure)
+          const resultId = completeResult?.session?.uuid || completeResult?.uuid || activeSession;
+          router.push(`/result/${resultId}`);
         }, 2000);
       } else {
         // Offline / local fallback if no backend session
@@ -646,14 +651,16 @@ export default function CheckoutPage() {
     try {
       await syncPhotosToServer(sessionId);
       const finalStripBlobs = await renderStripBlobs();
-      await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150);
+      const completeResult = await sessionsApi.complete(Number(sessionId), selectedFrame?.id, finalStripBlobs, 150);
       toast.success('Foto berhasil diproses!');
       // Keep arranged_slots for result page to re-render correctly
       localStorage.removeItem('captured_photos');
       localStorage.removeItem('selected_frame');
       localStorage.removeItem('active_session_id');
       localStorage.removeItem('event_gif_speed');
-      router.push(`/result/${sessionId}`);
+      // Use UUID for result URL (secure, non-enumerable)
+      const resultId = completeResult?.session?.uuid || completeResult?.uuid || sessionId;
+      router.push(`/result/${resultId}`);
     } catch (err: any) {
       console.error('Free session error:', err);
       toast.error(err?.message || 'Gagal memproses foto. Silakan coba lagi.');

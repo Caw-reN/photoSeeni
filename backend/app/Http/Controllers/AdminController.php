@@ -128,6 +128,7 @@ class AdminController extends Controller
             'payment_enabled' => Setting::getValue('payment_enabled', 'true') === 'true',
             'session_price' => (int) Setting::getValue('session_price', '25000'),
             'service_fee' => (int) Setting::getValue('service_fee', '1500'),
+            'regular_sessions_enabled' => Setting::getValue('regular_sessions_enabled', 'true') === 'true',
         ]);
     }
 
@@ -140,6 +141,7 @@ class AdminController extends Controller
             'payment_enabled' => 'sometimes|boolean',
             'session_price' => 'sometimes|numeric|min:0',
             'service_fee' => 'sometimes|numeric|min:0',
+            'regular_sessions_enabled' => 'sometimes|boolean',
         ]);
 
         if ($request->has('payment_enabled')) {
@@ -151,12 +153,16 @@ class AdminController extends Controller
         if ($request->has('service_fee')) {
             Setting::setValue('service_fee', (string)$request->service_fee);
         }
+        if ($request->has('regular_sessions_enabled')) {
+            Setting::setValue('regular_sessions_enabled', $request->regular_sessions_enabled ? 'true' : 'false');
+        }
 
         return response()->json([
             'message' => 'Payment settings updated successfully.',
             'payment_enabled' => Setting::getValue('payment_enabled', 'true') === 'true',
             'session_price' => (int) Setting::getValue('session_price', '25000'),
             'service_fee' => (int) Setting::getValue('service_fee', '1500'),
+            'regular_sessions_enabled' => Setting::getValue('regular_sessions_enabled', 'true') === 'true',
         ]);
     }
 }

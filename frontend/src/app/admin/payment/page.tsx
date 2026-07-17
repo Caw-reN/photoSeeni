@@ -9,6 +9,7 @@ export default function AdminPaymentPage() {
   const [paymentEnabled, setPaymentEnabled] = useState(true);
   const [sessionPrice, setSessionPrice] = useState(25000);
   const [serviceFee, setServiceFee] = useState(1500);
+  const [regularSessionsEnabled, setRegularSessionsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -19,6 +20,7 @@ export default function AdminPaymentPage() {
         setPaymentEnabled(data.payment_enabled);
         if (data.session_price !== undefined) setSessionPrice(data.session_price);
         if (data.service_fee !== undefined) setServiceFee(data.service_fee);
+        if (data.regular_sessions_enabled !== undefined) setRegularSessionsEnabled(data.regular_sessions_enabled);
       } catch (err) {
         console.error('Failed to load payment settings:', err);
       } finally {
@@ -40,6 +42,22 @@ export default function AdminPaymentPage() {
       toast.success(`Payments ${newState ? 'enabled' : 'disabled'} successfully!`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to update payment settings.');
+    }
+    setSaving(false);
+  };
+
+  const handleToggleRegularSessions = async () => {
+    const newState = !regularSessionsEnabled;
+    const action = newState ? 'mengaktifkan' : 'menonaktifkan';
+    if (!confirm(`Apakah Anda yakin ingin ${action} sesi reguler? ${!newState ? 'User tidak akan bisa memulai sesi foto sendiri.' : ''}`)) return;
+
+    setSaving(true);
+    try {
+      const data = await adminApi.setPaymentSettings({ regular_sessions_enabled: newState });
+      setRegularSessionsEnabled(data.regular_sessions_enabled);
+      toast.success(`Sesi reguler ${newState ? 'diaktifkan' : 'dinonaktifkan'}!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah pengaturan sesi reguler.');
     }
     setSaving(false);
   };
@@ -120,6 +138,52 @@ export default function AdminPaymentPage() {
               <ToggleLeft className="w-6 h-6" />
             )}
             {paymentEnabled ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+      </div>
+
+      {/* Regular Sessions Toggle Card */}
+      <div className={`neobrutal-box p-6 shadow-[6px_6px_0px_#1D1D23] transition-colors ${
+        regularSessionsEnabled ? 'bg-blue-50' : 'bg-orange-50'
+      }`}>
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className={`p-4 rounded-2xl border-3 border-[#1D1D23] ${
+            regularSessionsEnabled ? 'bg-blue-100' : 'bg-orange-100'
+          }`}>
+            {regularSessionsEnabled ? (
+              <CheckCircle className="w-10 h-10 text-blue-600" />
+            ) : (
+              <AlertTriangle className="w-10 h-10 text-orange-500" />
+            )}
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="text-xl font-black text-[#1D1D23] mb-1">
+              Sesi Reguler {regularSessionsEnabled ? 'Aktif' : 'Dinonaktifkan'}
+            </h3>
+            <p className="text-gray-600 font-medium text-sm">
+              {regularSessionsEnabled
+                ? 'User dapat memulai sesi foto reguler mandiri melalui dashboard atau beranda.'
+                : '⚠️ Mode Event Aktif: User tidak bisa memulai sesi foto sendiri. Hanya bisa menggunakan kode redeem event.'
+              }
+            </p>
+          </div>
+          <button
+            onClick={handleToggleRegularSessions}
+            disabled={saving}
+            className={`neobrutal-button px-6 py-3.5 flex items-center gap-3 font-black disabled:opacity-50 transition-colors ${
+              regularSessionsEnabled
+                ? 'bg-orange-500 text-white hover:bg-orange-600'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            {saving ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : regularSessionsEnabled ? (
+              <ToggleRight className="w-5 h-5" />
+            ) : (
+              <ToggleLeft className="w-5 h-5" />
+            )}
+            {regularSessionsEnabled ? 'Nonaktifkan (Event Mode)' : 'Aktifkan Kembali'}
           </button>
         </div>
       </div>

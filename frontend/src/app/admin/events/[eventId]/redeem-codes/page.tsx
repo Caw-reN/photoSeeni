@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Search, Copy, Check, Plus, Trash2, Loader2, CheckCircle2, AlertCircle, XCircle, Ticket, Mail, Phone, User, ExternalLink, Printer } from 'lucide-react';
+import { ArrowLeft, Search, Copy, Check, Plus, Trash2, Loader2, CheckCircle2, AlertCircle, XCircle, Ticket, Mail, Phone, User, ExternalLink, Printer, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
 
@@ -246,11 +246,24 @@ export default function ManageRedeemCodesPage() {
       <div className="max-w-5xl mx-auto">
         {/* Back navigation */}
         <button 
-          onClick={() => router.push(`/admin/events/${event.id}`)}
+          onClick={() => router.push('/admin/events')}
           className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 hover:text-[#1D1D23] transition-colors mb-6"
         >
-          <ArrowLeft className="w-4 h-4" /> Kembali ke detail event
+          <ArrowLeft className="w-4 h-4" /> Kembali ke daftar event
         </button>
+
+        {/* Internal Navigation Tabs */}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-1">
+          <button 
+            onClick={() => router.push(`/admin/events/${event.id}`)}
+            className="px-5 py-2.5 bg-white text-[#1D1D23] border-3 border-[#1D1D23] rounded-xl hover:bg-gray-50 shadow-[3px_3px_0px_#1D1D23] hover:shadow-[4px_4px_0px_#8A2BE2] font-black text-sm flex items-center gap-2 transition-all whitespace-nowrap"
+          >
+            <Info className="w-4 h-4" /> Detail & Paket
+          </button>
+          <button className="px-5 py-2.5 bg-[#1D1D23] text-white border-3 border-[#1D1D23] rounded-xl shadow-[3px_3px_0px_#8A2BE2] font-black text-sm flex items-center gap-2 whitespace-nowrap">
+            <Ticket className="w-4 h-4" /> Manajemen Redeem Codes
+          </button>
+        </div>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b-3 border-[#1D1D23] pb-5">

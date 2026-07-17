@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, ChevronRight, Loader2, Search, ToggleLeft, ToggleRight, Package, QrCode } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight, Loader2, Search, ToggleLeft, ToggleRight, Package, QrCode, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
 
@@ -137,6 +137,13 @@ export default function AdminEventsPage() {
                         title={event.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                       >
                         {event.is_active ? <ToggleRight className="w-3.5 h-3.5 text-emerald-600" /> : <ToggleLeft className="w-3.5 h-3.5 text-gray-400" />}
+                      </button>
+                      <button 
+                        onClick={e => { e.stopPropagation(); router.push(`/admin/events/${event.id}/redeem-codes`); }} 
+                        className="p-1.5 border-2 border-[#1D1D23] rounded-lg bg-violet-100 hover:bg-violet-200 text-[#8A2BE2] transition-colors"
+                        title="Lihat Redeem Codes"
+                      >
+                        <Ticket className="w-3.5 h-3.5" />
                       </button>
                       <button 
                         onClick={e => { e.stopPropagation(); handleDeleteEvent(event.id); }} 

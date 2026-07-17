@@ -40,7 +40,8 @@ export default function Header() {
     pathname === '/booth' ||
     pathname === '/select-frame' ||
     pathname === '/edit-photo' ||
-    pathname === '/checkout'
+    pathname === '/checkout' ||
+    pathname.startsWith('/admin')
   ) {
     return null;
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { authApi } from '@/lib/api';
+import { authApi, settingsApi } from '@/lib/api';
 import { Camera, User as UserIcon, Image as ImageIcon, Frame, Loader2, LogOut, PenTool } from 'lucide-react';
 import Link from 'next/link';
 
@@ -32,6 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [regularSessionsEnabled, setRegularSessionsEnabled] = useState(true);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -54,6 +55,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     const init = async () => {
       await refreshUser();
+      // Check if regular sessions are enabled
+      try {
+        const settings = await settingsApi.getPublic();
+        if (settings.regular_sessions_enabled === false) {
+          setRegularSessionsEnabled(false);
+        }
+      } catch (_) {}
       setLoading(false);
     };
     init();
@@ -88,9 +96,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-gray-500 font-medium text-sm">{user?.email}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link href="/booth" className="neobrutal-button px-5 py-2.5 bg-[#FF7F50] text-[#1D1D23] flex items-center gap-2 text-sm hover:bg-[#ff8e66]">
-                <Camera className="w-4 h-4" /> New Session
-              </Link>
+              {regularSessionsEnabled && (
+                <Link href="/booth" className="neobrutal-button px-5 py-2.5 bg-[#FF7F50] text-[#1D1D23] flex items-center gap-2 text-sm hover:bg-[#ff8e66]">
+                  <Camera className="w-4 h-4" /> New Session
+                </Link>
+              )}
               <button onClick={handleLogout} className="neobrutal-button px-5 py-2.5 bg-white text-[#1D1D23] flex items-center gap-2 text-sm">
                 <LogOut className="w-4 h-4" /> Logout
               </button>

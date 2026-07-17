@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { QrCode, Camera, Search, AlertCircle, CheckCircle2, Loader2, Package, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { eventsApi } from '@/lib/api';
@@ -17,6 +17,7 @@ type ValidateResult = {
 
 export default function RedeemPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [code, setCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [result, setResult] = useState<ValidateResult | null>(null);
@@ -217,9 +218,37 @@ export default function RedeemPage() {
           <div className="flex-1 h-px bg-[#1D1D23]/20" />
         </div>
 
-        <button onClick={() => router.push('/')} className="w-full py-3 rounded-xl border-3 border-[#1D1D23] bg-white text-[#1D1D23] font-black text-sm shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px active:shadow-none transition-all">
-          ← Kembali ke Home
-        </button>
+        {(() => {
+          const getEventSlug = () => {
+            const paramSlug = searchParams.get('event');
+            if (paramSlug) return paramSlug;
+
+            if (result?.event?.slug) return result.event.slug;
+
+            if (typeof window !== 'undefined') {
+              const stored = localStorage.getItem('last_event_slug');
+              if (stored) return stored;
+            }
+            return null;
+          };
+
+          const targetSlug = getEventSlug();
+
+          return (
+            <button
+              onClick={() => {
+                if (targetSlug) {
+                  router.push(`/event/${targetSlug}`);
+                } else {
+                  router.push('/');
+                }
+              }}
+              className="w-full py-3 rounded-xl border-3 border-[#1D1D23] bg-white text-[#1D1D23] font-black text-sm shadow-[3px_3px_0px_#1D1D23] hover:translate-x-px hover:translate-y-px active:shadow-none transition-all"
+            >
+              {targetSlug ? '← Kembali ke Event' : '← Kembali ke Home'}
+            </button>
+          );
+        })()}
       </div>
     </div>
   );

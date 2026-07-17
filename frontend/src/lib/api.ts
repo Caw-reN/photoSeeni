@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://d310-2001-448a-9000-8f1-7048-daba-806d-1a88.ngrok-free.app/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://e53e-103-224-73-153.ngrok-free.app/api';
 
 const getHeaders = () => {
   const headers: HeadersInit = {
@@ -261,7 +261,7 @@ export const adminApi = {
 
   // Payment settings
   getPaymentSettings: () => apiRequest('/admin/settings/payment'),
-  setPaymentSettings: (data: { payment_enabled?: boolean; session_price?: number; service_fee?: number }) => apiRequest('/admin/settings/payment', {
+  setPaymentSettings: (data: { payment_enabled?: boolean; session_price?: number; service_fee?: number; regular_sessions_enabled?: boolean }) => apiRequest('/admin/settings/payment', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
